@@ -5,12 +5,17 @@ import os
 import tempfile
 from utils import alert_manager
 
-BG_DARK      = "#080B10"
-ACCENT       = "#00E5CC"
-ACCENT2      = "#FF6B6B"
-TEXT_PRIMARY = "#E8EDF3"
-TEXT_MUTED   = "#4A5568"
-BORDER       = "#1A2332"
+BG_BASE   = "#FFFFFF"
+BG_CARD   = "#F4F6F8"
+BG_CARD2  = "#EAECEF"
+ACCENT    = "#00C9A7"
+ACCENT_LT = "#D6F5EF"
+DANGER    = "#FF5C5C"
+WARNING   = "#FFB347"
+TEXT_PRI  = "#1A1D23"
+TEXT_SEC  = "#5A6375"
+TEXT_MUT  = "#9DA8B7"
+BORDER    = "#E2E6EC"
 
 _MODEL_PATHS = [
     os.path.join(os.path.dirname(os.path.dirname(__file__)), "pose_landmarker.task"),
@@ -23,6 +28,7 @@ def _find_model():
         if os.path.exists(p):
             return p
     return None
+
 
 def _calc_score(landmarks) -> tuple:
     try:
@@ -78,7 +84,6 @@ class PostureView:
         self.issue_col_ref = ft.Ref()
         self.fps_ref       = ft.Ref()
 
-    # ── OpenCV 별도 창 워커 ─────────────────────────────────────
     def _camera_worker(self):
         try:
             import cv2
@@ -94,12 +99,11 @@ class PostureView:
 
         model_path = _find_model()
         if not model_path:
-            self._set_status("❌ pose_landmarker.task 파일 없음\n앱 폴더에 넣어주세요")
+            self._set_status("❌ pose_landmarker.task 파일 없음")
             self.monitoring = False
             return
 
         self._set_status("🔄 모델 로딩 중...")
-
         try:
             options = PoseLandmarkerOptions(
                 base_options=mp_python.BaseOptions(model_asset_path=model_path),
@@ -135,7 +139,6 @@ class PostureView:
         fps_count = 0
         score     = 0
 
-        # ── OpenCV 창 설정 ──────────────────────────────────────
         win_name = "FocusMate — 자세 분석 (Q: 종료)"
         cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
         cv2.resizeWindow(win_name, 800, 600)
@@ -167,31 +170,24 @@ class PostureView:
                 if result and result.pose_landmarks:
                     lm = result.pose_landmarks[0]
                     score, issues = _calc_score(lm)
-                    alert_manager.set_score(score)  # 알림 데몬에 점수 전달
+                    alert_manager.set_score(score)
 
-                    # 스켈레톤
                     pts = [(int(l.x * w), int(l.y * h)) for l in lm]
                     for a, b in SKEL_CONNS:
                         if a < len(pts) and b < len(pts):
-                            cv2.line(frame, pts[a], pts[b], (0, 200, 160), 2, cv2.LINE_AA)
+                            cv2.line(frame, pts[a], pts[b], (0, 201, 167), 2, cv2.LINE_AA)
                     for x, y in pts:
-                        cv2.circle(frame, (x, y), 4, (0, 229, 204), -1, cv2.LINE_AA)
+                        cv2.circle(frame, (x, y), 4, (0, 201, 167), -1, cv2.LINE_AA)
 
-                # HUD 오버레이
-                color_bgr = (0,229,204) if score>=70 else (0,165,255) if score>=50 else (80,80,255)
-                label_ko  = issues[0] if issues else ""
-
-                # 반투명 배경 박스
+                color_bgr = (0,201,167) if score>=70 else (71,179,255) if score>=50 else (92,92,255)
                 overlay = frame.copy()
-                cv2.rectangle(overlay, (0, 0), (w, 70), (8, 11, 16), -1)
-                cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
-
+                cv2.rectangle(overlay, (0, 0), (w, 70), (244, 246, 248), -1)
+                cv2.addWeighted(overlay, 0.8, frame, 0.2, 0, frame)
                 cv2.putText(frame, f"Score: {score}",
                             (14, 38), cv2.FONT_HERSHEY_SIMPLEX, 1.1, color_bgr, 2, cv2.LINE_AA)
-                cv2.putText(frame, label_ko,
-                            (14, 62), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200,200,200), 1, cv2.LINE_AA)
+                cv2.putText(frame, issues[0] if issues else "",
+                            (14, 62), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (90,99,117), 1, cv2.LINE_AA)
 
-                # FPS
                 fps_count += 1
                 elapsed = time.time() - fps_timer
                 if elapsed >= 1.0:
@@ -201,13 +197,10 @@ class PostureView:
                     self._update_score_ui(score, issues, round(fps))
 
                 cv2.imshow(win_name, frame)
-
-                # Q 또는 창 닫기 → 종료
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord('q') or cv2.getWindowProperty(win_name, cv2.WND_PROP_VISIBLE) < 1:
                     self.monitoring = False
                     break
-
         finally:
             cap.release()
             landmarker.close()
@@ -216,15 +209,13 @@ class PostureView:
             self._set_cam_on(False)
             self._set_status("모니터링을 시작해주세요")
             self._reset_score_ui()
-            # 버튼 텍스트도 원복
             try:
                 self.page.update()
             except Exception:
                 pass
 
-    # ── UI 업데이트 (1초마다) ───────────────────────────────────
     def _update_score_ui(self, score: int, issues: list, fps: int):
-        color = ACCENT if score >= 70 else ("#FFA500" if score >= 50 else ACCENT2)
+        color = ACCENT if score >= 70 else (WARNING if score >= 50 else DANGER)
         try:
             if self.score_ref.current:
                 self.score_ref.current.value = str(score)
@@ -239,7 +230,7 @@ class PostureView:
                 self.fps_ref.current.value = f"{fps} FPS"
             if self.issue_col_ref.current:
                 self.issue_col_ref.current.controls = [
-                    ft.Text(f"• {i}", size=11, color=ACCENT2, font_family="Pretendard")
+                    ft.Text(f"• {i}", size=11, color=DANGER, font_family="Galmuri")
                     for i in issues[1:]
                 ]
             self.page.update()
@@ -265,10 +256,10 @@ class PostureView:
     def _set_cam_on(self, on: bool):
         try:
             if self.cam_dot_ref.current:
-                self.cam_dot_ref.current.bgcolor = ACCENT if on else ACCENT2
+                self.cam_dot_ref.current.bgcolor = ACCENT if on else DANGER
             if self.cam_label_ref.current:
                 self.cam_label_ref.current.value = "카메라 켜짐" if on else "카메라 꺼짐"
-                self.cam_label_ref.current.color = ACCENT if on else ACCENT2
+                self.cam_label_ref.current.color = ACCENT if on else DANGER
             self.page.update()
         except Exception:
             pass
@@ -288,7 +279,7 @@ class PostureView:
         if self.monitoring:
             row.controls[0].value = "\ue047"
             row.controls[1].value = "모니터링 중지"
-            btn.bgcolor = ACCENT2
+            btn.bgcolor = DANGER
             btn.update()
             self._thread = threading.Thread(target=self._camera_worker, daemon=True)
             self._thread.start()
@@ -298,40 +289,38 @@ class PostureView:
             btn.bgcolor = ACCENT
             btn.update()
 
-    # ── score ring ─────────────────────────────────────────────
-    def _score_ring(self) -> ft.Stack:
-        return ft.Stack(
-            controls=[
-                ft.Container(
-                    content=ft.ProgressRing(
+    def _score_ring(self) -> ft.Container:
+        return ft.Container(
+            width=150, height=150,
+            content=ft.Stack(
+                controls=[
+                    ft.ProgressRing(
                         ref=self.ring_ref,
-                        value=0, width=160, height=160,
-                        stroke_width=14, color=ACCENT, bgcolor="#1A2332",
+                        value=0, width=150, height=150,
+                        stroke_width=12, color=ACCENT, bgcolor=BORDER,
                     ),
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Container(
-                    content=ft.Column(
-                        controls=[
-                            ft.Text(ref=self.score_ref, value="--",
-                                    size=40, weight=ft.FontWeight.W_900,
-                                    color=ACCENT, font_family="Pretendard",
-                                    text_align=ft.TextAlign.CENTER),
-                            ft.Text("자세 점수", size=11, color=TEXT_MUTED,
-                                    font_family="Pretendard",
-                                    text_align=ft.TextAlign.CENTER),
-                        ],
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                        spacing=0,
+                    ft.Container(
+                        width=150, height=150,
+                        alignment=ft.Alignment(0, 0),
+                        content=ft.Column(
+                            controls=[
+                                ft.Text(ref=self.score_ref, value="--",
+                                        size=36, weight=ft.FontWeight.W_500,
+                                        color=ACCENT, font_family="GalmuriBold",
+                                        text_align=ft.TextAlign.CENTER),
+                                ft.Text("자세 점수", size=11, color=TEXT_MUT,
+                                        font_family="Galmuri",
+                                        text_align=ft.TextAlign.CENTER),
+                            ],
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            spacing=2,
+                        ),
                     ),
-                    width=160, height=160,
-                    alignment=ft.Alignment(0, 0),
-                ),
-            ],
-            width=160, height=160,
+                ],
+            ),
         )
 
-    # ── build ──────────────────────────────────────────────────
     def build(self) -> ft.Container:
         tips = [
             ("모니터 높이", "눈높이와 모니터 상단이 일치하도록"),
@@ -342,32 +331,31 @@ class PostureView:
 
         model_path = _find_model()
 
-        # 카메라 프리뷰 안내 박스
         preview_box = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text("\ue3a5", font_family="Material Icons", size=56, color="#1A3A30"),
+                    ft.Text("\ue3a5", font_family="Material Icons", size=52, color=BORDER),
                     ft.Text("모니터링 시작 버튼을 누르면\nOpenCV 창이 열립니다",
-                            size=14, color=TEXT_MUTED, font_family="Pretendard",
+                            size=14, color=TEXT_MUT, font_family="Galmuri",
                             text_align=ft.TextAlign.CENTER),
                     ft.Container(height=8),
                     ft.Container(
                         content=ft.Row(
                             controls=[
                                 ft.Container(ref=self.cam_dot_ref,
-                                             width=8, height=8, bgcolor=ACCENT2,
+                                             width=8, height=8, bgcolor=DANGER,
                                              border_radius=4),
                                 ft.Text(ref=self.cam_label_ref,
                                         value="카메라 꺼짐", size=12,
-                                        color=ACCENT2, font_family="Pretendard"),
+                                        color=DANGER, font_family="Galmuri"),
                                 ft.Container(expand=True),
                                 ft.Text(ref=self.fps_ref, value="",
-                                        size=11, color=TEXT_MUTED,
-                                        font_family="JetBrains"),
+                                        size=11, color=TEXT_MUT,
+                                        font_family="Galmuri"),
                             ],
                             spacing=6,
                         ),
-                        bgcolor="#0A0F16",
+                        bgcolor=BG_CARD2,
                         border_radius=8,
                         padding=ft.padding.only(left=12, top=8, right=12, bottom=8),
                         border=ft.border.all(1, BORDER),
@@ -377,8 +365,8 @@ class PostureView:
                 alignment=ft.MainAxisAlignment.CENTER,
                 spacing=8,
             ),
-            height=260,
-            bgcolor="#0A0E14",
+            height=240,
+            bgcolor=BG_CARD,
             border_radius=16,
             border=ft.border.all(1, BORDER),
             alignment=ft.Alignment(0, 0),
@@ -388,19 +376,19 @@ class PostureView:
         model_warning = ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Text("\ue002", font_family="Material Icons", size=16, color="#FFA500"),
+                    ft.Text("\ue002", font_family="Material Icons", size=16, color=WARNING),
                     ft.Text(
-                        "pose_landmarker.task 파일이 없어요!\n"
-                        "터미널에서: curl -o pose_landmarker.task \"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task\"",
-                        size=11, color="#FFA500", font_family="Pretendard",
+                        "pose_landmarker.task 파일 없음!\n"
+                        "터미널: curl -o pose_landmarker.task \"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task\"",
+                        size=11, color=WARNING, font_family="Galmuri",
                     ),
                 ],
                 spacing=8,
             ),
-            bgcolor="#1A1200",
+            bgcolor=WARNING + "15",
             border_radius=8,
             padding=12,
-            border=ft.border.all(1, "#FFA50040"),
+            border=ft.border.all(1, WARNING + "50"),
             visible=model_path is None,
         )
 
@@ -411,18 +399,18 @@ class PostureView:
                 card(
                     ft.Column(
                         controls=[
-                            ft.Text("실시간 점수", size=15, weight=ft.FontWeight.W_700,
-                                    color=TEXT_PRIMARY, font_family="Pretendard"),
-                            ft.Container(height=16),
+                            ft.Text("실시간 점수", size=14, weight=ft.FontWeight.W_400,
+                                    color=TEXT_PRI, font_family="Galmuri"),
+                            ft.Container(height=14),
                             ft.Container(content=self._score_ring(),
                                          alignment=ft.Alignment(0, 0)),
-                            ft.Container(height=12),
+                            ft.Container(height=10),
                             ft.Text(ref=self.status_ref,
                                     value="모니터링을 시작해주세요",
-                                    size=12, color=TEXT_MUTED,
-                                    font_family="Pretendard",
+                                    size=12, color=TEXT_MUT,
+                                    font_family="Galmuri",
                                     text_align=ft.TextAlign.CENTER),
-                            ft.Container(height=6),
+                            ft.Container(height=4),
                             issue_col,
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -432,18 +420,22 @@ class PostureView:
                 card(
                     ft.Column(
                         controls=[
-                            ft.Text("자세 체크리스트", size=14, weight=ft.FontWeight.W_700,
-                                    color=TEXT_PRIMARY, font_family="Pretendard"),
-                            ft.Container(height=8),
+                            ft.Text("자세 체크리스트", size=13, weight=ft.FontWeight.W_400,
+                                    color=TEXT_PRI, font_family="Galmuri"),
+                            ft.Container(height=6),
                             *[
                                 ft.Row(controls=[
-                                    ft.Text("\ue5ca", font_family="Material Icons",
-                                            size=16, color=TEXT_MUTED),
+                                    ft.Container(
+                                        content=ft.Text("\ue5ca",
+                                                        font_family="Material Icons",
+                                                        size=16, color=ACCENT),
+                                        width=24,
+                                    ),
                                     ft.Column(controls=[
-                                        ft.Text(t, size=12, color=TEXT_PRIMARY,
-                                                font_family="Pretendard"),
-                                        ft.Text(d, size=10, color=TEXT_MUTED,
-                                                font_family="Pretendard"),
+                                        ft.Text(t, size=12, color=TEXT_PRI,
+                                                font_family="Galmuri"),
+                                        ft.Text(d, size=10, color=TEXT_MUT,
+                                                font_family="Galmuri"),
                                     ], spacing=1),
                                 ], spacing=8)
                                 for t, d in tips
@@ -457,17 +449,19 @@ class PostureView:
                     content=ft.Row(
                         controls=[
                             ft.Text("\ue037", font_family="Material Icons",
-                                    size=18, color="#080B10"),
-                            ft.Text("모니터링 시작", size=14, weight=ft.FontWeight.W_700,
-                                    color="#080B10", font_family="Pretendard"),
+                                    size=18, color="#FFFFFF"),
+                            ft.Text("모니터링 시작", size=14, weight=ft.FontWeight.W_400,
+                                    color="#FFFFFF", font_family="Galmuri"),
                         ],
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=8,
                     ),
                     bgcolor=ACCENT,
                     border_radius=12,
-                    padding=ft.padding.only(left=0, top=14, right=0, bottom=14),
+                    padding=ft.padding.only(top=14, bottom=14),
                     on_click=self._toggle,
+                    shadow=ft.BoxShadow(blur_radius=12, color=ACCENT + "55",
+                                        offset=ft.Offset(0, 4)),
                 ),
             ],
             width=240, spacing=0,
@@ -479,14 +473,14 @@ class PostureView:
                     ft.Container(
                         content=ft.Text("\ue3a5", font_family="Material Icons",
                                        size=20, color=ACCENT),
-                        width=40, height=40, bgcolor="#071A17",
+                        width=38, height=38, bgcolor=ACCENT_LT,
                         border_radius=10, alignment=ft.Alignment(0, 0),
                     ),
                     ft.Column(controls=[
-                        ft.Text(t, size=13, weight=ft.FontWeight.W_700,
-                                color=TEXT_PRIMARY, font_family="Pretendard"),
-                        ft.Text(d, size=11, color=TEXT_MUTED,
-                                font_family="Pretendard"),
+                        ft.Text(t, size=13, weight=ft.FontWeight.W_400,
+                                color=TEXT_PRI, font_family="Galmuri"),
+                        ft.Text(d, size=11, color=TEXT_SEC,
+                                font_family="Galmuri"),
                     ], spacing=2, expand=True),
                 ], spacing=12))
                 for t, d in tips
@@ -497,18 +491,18 @@ class PostureView:
         main_area = ft.Column(
             controls=[
                 ft.Column(controls=[
-                    ft.Text("자세 교정", size=26, weight=ft.FontWeight.W_900,
-                            color=TEXT_PRIMARY, font_family="Pretendard"),
+                    ft.Text("자세 교정", size=26, weight=ft.FontWeight.W_400,
+                            color=TEXT_PRI, font_family="Galmuri"),
                     ft.Text("OpenCV 창에서 실시간 자세 분석 · 점수는 앱에 표시",
-                            size=13, color=TEXT_MUTED, font_family="Pretendard"),
+                            size=13, color=TEXT_SEC, font_family="Galmuri"),
                 ], spacing=2),
                 ft.Container(height=12),
                 model_warning,
                 ft.Container(height=4),
                 preview_box,
                 ft.Container(height=16),
-                ft.Text("교정 팁", size=14, weight=ft.FontWeight.W_700,
-                        color=TEXT_PRIMARY, font_family="Pretendard"),
+                ft.Text("교정 팁", size=14, weight=ft.FontWeight.W_400,
+                        color=TEXT_PRI, font_family="Galmuri"),
                 ft.Container(height=8),
                 tip_cards,
             ],
@@ -524,5 +518,5 @@ class PostureView:
             ),
             expand=True,
             padding=ft.padding.only(left=28, top=24, right=28, bottom=24),
-            bgcolor="#080B10",
+            bgcolor=BG_BASE,
         )

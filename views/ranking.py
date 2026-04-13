@@ -1,75 +1,135 @@
 import flet as ft
+import json, os
 from components.ui import card, ghost_btn
 
-BG_DARK = "#080B10"
-BG_CARD = "#0D1117"
-BG_CARD2 = "#131920"
-ACCENT = "#00E5CC"
-ACCENT2 = "#FF6B6B"
-PURPLE = "#A78BFA"
-YELLOW = "#F59E0B"
-TEXT_PRIMARY = "#E8EDF3"
-TEXT_MUTED = "#4A5568"
-BORDER = "#1A2332"
+BG_BASE   = "#FFFFFF"
+BG_CARD   = "#F4F6F8"
+BG_CARD2  = "#EAECEF"
+ACCENT    = "#00C9A7"
+ACCENT_LT = "#D6F5EF"
+DANGER    = "#FF5C5C"
+WARNING   = "#FFB347"
+PURPLE    = "#9B8FFF"
+TEXT_PRI  = "#1A1D23"
+TEXT_SEC  = "#5A6375"
+TEXT_MUT  = "#9DA8B7"
+BORDER    = "#E2E6EC"
 
-FRIENDS = [
-    {"name": "김철수",  "sessions": 18, "focus": "4h 32m", "streak": 12, "score": 97,  "avatar": "#00E5CC", "me": False},
-    {"name": "이영희",  "sessions": 16, "focus": "3h 55m", "streak": 9,  "score": 89,  "avatar": "#A78BFA", "me": False},
-    {"name": "나 (박지수)", "sessions": 14, "focus": "3h 20m", "streak": 5, "score": 82, "avatar": "#FF6B6B", "me": True},
-    {"name": "최민준",  "sessions": 12, "focus": "2h 50m", "streak": 3,  "score": 75,  "avatar": "#F59E0B", "me": False},
-    {"name": "한소희",  "sessions": 10, "focus": "2h 10m", "streak": 7,  "score": 68,  "avatar": "#34D399", "me": False},
-    {"name": "정우성",  "sessions": 8,  "focus": "1h 45m", "streak": 2,  "score": 55,  "avatar": "#60A5FA", "me": False},
+# ── 로컬 JSON 데이터 구조 ───────────────────────────────────────
+DATA_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "friends.json")
+
+DEFAULT_FRIENDS = [
+    {"name": "김철수",    "sessions": 18, "focus_min": 272, "streak": 12, "score": 97,  "avatar": "#00C9A7", "me": False},
+    {"name": "이영희",    "sessions": 16, "focus_min": 235, "streak": 9,  "score": 89,  "avatar": "#9B8FFF", "me": False},
+    {"name": "나 (박지수)", "sessions": 14, "focus_min": 200, "streak": 5, "score": 82, "avatar": "#FF5C5C", "me": True},
+    {"name": "최민준",    "sessions": 12, "focus_min": 170, "streak": 3,  "score": 75,  "avatar": "#FFB347", "me": False},
+    {"name": "한소희",    "sessions": 10, "focus_min": 130, "streak": 7,  "score": 68,  "avatar": "#34D399", "me": False},
+    {"name": "정우성",    "sessions": 8,  "focus_min": 105, "streak": 2,  "score": 55,  "avatar": "#60A5FA", "me": False},
 ]
 
 MEDALS = ["🥇", "🥈", "🥉"]
 
 
+def _fmt_min(minutes: int) -> str:
+    h = minutes // 60
+    m = minutes % 60
+    if h > 0:
+        return f"{h}h {m:02d}m"
+    return f"{m}m"
+
+
+def _load_friends() -> list:
+    try:
+        os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    # 없으면 기본값 저장
+    _save_friends(DEFAULT_FRIENDS)
+    return DEFAULT_FRIENDS
+
+
+def _save_friends(friends: list):
+    try:
+        os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(friends, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+
+def add_focus_session(minutes: int = 25):
+    """뽀모도로 완료 시 호출 → 내 데이터에 세션 추가"""
+    friends = _load_friends()
+    for f in friends:
+        if f.get("me"):
+            f["sessions"] = f.get("sessions", 0) + 1
+            f["focus_min"] = f.get("focus_min", 0) + minutes
+            f["score"] = min(100, f.get("score", 0) + 2)
+            break
+    # 점수 기준 재정렬
+    friends.sort(key=lambda x: x["score"], reverse=True)
+    _save_friends(friends)
+
+
 class RankingView:
     def __init__(self, page: ft.Page):
         self.page = page
+        self.friends = _load_friends()
+        self.period = "오늘"
+
+    def _reload(self):
+        self.friends = _load_friends()
 
     def _podium(self) -> ft.Row:
-        top3 = FRIENDS[:3]
-        podium_heights = [80, 110, 60]  # 2nd, 1st, 3rd
-        orders = [1, 0, 2]  # visual order: 2nd, 1st, 3rd
+        top3 = self.friends[:3]
+        visual_order = [1, 0, 2]  # 2등, 1등, 3등 시각 순서
+        heights = [70, 100, 50]
+        rank_colors = [PURPLE, ACCENT, DANGER]
 
         cols = []
-        for visual_pos, rank_idx in enumerate(orders):
-            f = top3[rank_idx]
-            h = podium_heights[visual_pos]
-            medal = MEDALS[rank_idx]
-            bar_color = [PURPLE, ACCENT, ACCENT2][rank_idx]
+        for vi, ri in enumerate(visual_order):
+            if ri >= len(top3):
+                continue
+            f = top3[ri]
+            medal = MEDALS[ri]
+            bar_color = rank_colors[ri]
+            h = heights[vi]
 
             cols.append(
                 ft.Column(
                     controls=[
-                        ft.Text(medal, size=28, text_align=ft.TextAlign.CENTER),
+                        ft.Text(medal, size=26, text_align=ft.TextAlign.CENTER),
                         ft.Container(
-                            content=ft.Text(f["name"][0], size=18,
-                                            color="#080B10", font_family="Pretendard",
-                                            weight=ft.FontWeight.W_900),
-                            width=48, height=48,
-                            border_radius=24,
+                            content=ft.Text(f["name"][0], size=16,
+                                            color="#FFFFFF", font_family="Galmuri",
+                                            weight=ft.FontWeight.W_400),
+                            width=44, height=44,
+                            border_radius=22,
                             bgcolor=f["avatar"],
                             alignment=ft.Alignment(0, 0),
+                            shadow=ft.BoxShadow(blur_radius=8, color=f["avatar"] + "55",
+                                                offset=ft.Offset(0, 2)),
                         ),
-                        ft.Text(f["name"], size=12, color=TEXT_PRIMARY,
-                                font_family="Pretendard",
+                        ft.Text(f["name"].split("(")[0].strip(), size=11, color=TEXT_PRI,
+                                font_family="Galmuri",
                                 text_align=ft.TextAlign.CENTER,
-                                weight=ft.FontWeight.W_600),
-                        ft.Text(f["focus"], size=11, color=TEXT_MUTED,
-                                font_family="JetBrains",
+                                weight=ft.FontWeight.W_400),
+                        ft.Text(_fmt_min(f["focus_min"]), size=10, color=TEXT_MUT,
+                                font_family="Galmuri",
                                 text_align=ft.TextAlign.CENTER),
                         ft.Container(
-                            width=80, height=h,
-                            bgcolor=bar_color + "30",
-                            border=ft.border.all(1, bar_color + "60"),
+                            width=72, height=h,
+                            bgcolor=bar_color + "18",
+                            border=ft.border.all(1.5, bar_color + "50"),
                             border_radius=ft.BorderRadius(8, 8, 0, 0),
                             alignment=ft.Alignment(0, 0),
-                            content=ft.Text(f"#{rank_idx + 1}", size=16,
+                            content=ft.Text(f"#{ri + 1}", size=15,
                                             color=bar_color,
-                                            weight=ft.FontWeight.W_900,
-                                            font_family="Pretendard"),
+                                            weight=ft.FontWeight.W_400,
+                                            font_family="Galmuri"),
                         ),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -87,8 +147,7 @@ class RankingView:
     def _rank_row(self, rank: int, friend: dict) -> ft.Container:
         is_me = friend["me"]
         medal = MEDALS[rank - 1] if rank <= 3 else f"#{rank}"
-
-        bar_w_pct = friend["score"] / 100
+        bar_pct = friend["score"] / 100
 
         return ft.Container(
             content=ft.Column(
@@ -96,18 +155,18 @@ class RankingView:
                     ft.Row(
                         controls=[
                             ft.Container(
-                                content=ft.Text(medal, size=14 if rank <= 3 else 12,
-                                                color=ACCENT if is_me else TEXT_MUTED,
-                                                font_family="Pretendard",
-                                                weight=ft.FontWeight.W_700),
-                                width=36,
+                                content=ft.Text(medal, size=13 if rank <= 3 else 11,
+                                                color=ACCENT if is_me else TEXT_MUT,
+                                                font_family="Galmuri",
+                                                weight=ft.FontWeight.W_400),
+                                width=34,
                                 alignment=ft.Alignment(0, 0),
                             ),
                             ft.Container(
-                                content=ft.Text(friend["name"][0], size=13,
-                                                color="#080B10", font_family="Pretendard"),
-                                width=32, height=32,
-                                border_radius=16,
+                                content=ft.Text(friend["name"][0], size=12,
+                                                color="#FFFFFF", font_family="Galmuri"),
+                                width=30, height=30,
+                                border_radius=15,
                                 bgcolor=friend["avatar"],
                                 alignment=ft.Alignment(0, 0),
                             ),
@@ -116,13 +175,13 @@ class RankingView:
                                     ft.Row(
                                         controls=[
                                             ft.Text(friend["name"], size=13,
-                                                    color=ACCENT if is_me else TEXT_PRIMARY,
-                                                    font_family="Pretendard",
-                                                    weight=ft.FontWeight.W_600 if is_me else ft.FontWeight.W_400),
+                                                    color=ACCENT if is_me else TEXT_PRI,
+                                                    font_family="Galmuri",
+                                                    weight=ft.FontWeight.W_400 if is_me else ft.FontWeight.W_400),
                                             *(
                                                 [ft.Container(
-                                                    content=ft.Text("나", size=9, color="#080B10",
-                                                                    font_family="Pretendard"),
+                                                    content=ft.Text("나", size=9, color="#FFFFFF",
+                                                                    font_family="Galmuri"),
                                                     bgcolor=ACCENT, border_radius=4,
                                                     padding=ft.padding.only(left=5, top=1, right=5, bottom=1),
                                                 )]
@@ -134,9 +193,9 @@ class RankingView:
                                     ft.Row(
                                         controls=[
                                             ft.Text(f"🔥 {friend['streak']}일", size=11,
-                                                    color=TEXT_MUTED, font_family="Pretendard"),
+                                                    color=TEXT_MUT, font_family="Galmuri"),
                                             ft.Text(f"세션 {friend['sessions']}회", size=11,
-                                                    color=TEXT_MUTED, font_family="Pretendard"),
+                                                    color=TEXT_MUT, font_family="Galmuri"),
                                         ],
                                         spacing=10,
                                     ),
@@ -146,12 +205,12 @@ class RankingView:
                             ),
                             ft.Column(
                                 controls=[
-                                    ft.Text(friend["focus"], size=14,
-                                            color=ACCENT if is_me else TEXT_PRIMARY,
-                                            font_family="JetBrains",
-                                            weight=ft.FontWeight.W_700),
-                                    ft.Text("집중시간", size=10, color=TEXT_MUTED,
-                                            font_family="Pretendard"),
+                                    ft.Text(_fmt_min(friend["focus_min"]), size=14,
+                                            color=ACCENT if is_me else TEXT_PRI,
+                                            font_family="Galmuri",
+                                            weight=ft.FontWeight.W_400),
+                                    ft.Text("집중시간", size=10, color=TEXT_MUT,
+                                            font_family="Galmuri"),
                                 ],
                                 horizontal_alignment=ft.CrossAxisAlignment.END,
                                 spacing=2,
@@ -162,52 +221,59 @@ class RankingView:
                     ),
                     ft.Container(
                         content=ft.ProgressBar(
-                            value=bar_w_pct, color=ACCENT if is_me else "#1E3A3A",
-                            bgcolor="#111820", height=4, border_radius=2,
+                            value=bar_pct,
+                            color=ACCENT if is_me else BG_CARD2,
+                            bgcolor=BORDER, height=4, border_radius=2,
                         ),
-                        padding=ft.padding.only(left=36, top=0, right=0, bottom=0),
+                        padding=ft.padding.only(left=34, top=0),
                     ),
                 ],
                 spacing=8,
             ),
-            bgcolor=ACCENT + "08" if is_me else BG_CARD,
+            bgcolor=ACCENT_LT if is_me else BG_CARD,
             border_radius=14,
             padding=ft.padding.only(left=14, top=12, right=14, bottom=12),
-            border=ft.border.all(1, ACCENT + "40" if is_me else BORDER),
+            border=ft.border.all(1.5, ACCENT + "50" if is_me else BORDER),
+            shadow=ft.BoxShadow(blur_radius=4, color="#00000008",
+                                offset=ft.Offset(0, 1)),
         )
 
     def build(self) -> ft.Container:
-        my_rank = next((i + 1 for i, f in enumerate(FRIENDS) if f["me"]), None)
-        my_data = next(f for f in FRIENDS if f["me"])
+        self._reload()
+        my_rank = next((i + 1 for i, f in enumerate(self.friends) if f["me"]), None)
+        my_data = next(f for f in self.friends if f["me"])
 
         my_card = card(
             ft.Row(
                 controls=[
                     ft.Container(
-                        content=ft.Text(my_data["name"][0], size=22,
-                                        color="#080B10", font_family="Pretendard",
-                                        weight=ft.FontWeight.W_900),
-                        width=56, height=56,
-                        border_radius=28,
+                        content=ft.Text(my_data["name"][0], size=20,
+                                        color="#FFFFFF", font_family="GalmuriBold",
+                                        weight=ft.FontWeight.W_400),
+                        width=52, height=52,
+                        border_radius=26,
                         bgcolor=my_data["avatar"],
                         alignment=ft.Alignment(0, 0),
+                        shadow=ft.BoxShadow(blur_radius=10, color=my_data["avatar"] + "55",
+                                            offset=ft.Offset(0, 3)),
                     ),
                     ft.Column(
                         controls=[
-                            ft.Text(my_data["name"], size=16, weight=ft.FontWeight.W_700,
-                                    color=TEXT_PRIMARY, font_family="Pretendard"),
+                            ft.Text(my_data["name"], size=15, weight=ft.FontWeight.W_400,
+                                    color=TEXT_PRI, font_family="Galmuri"),
                             ft.Text(f"현재 #{my_rank}위", size=13, color=ACCENT,
-                                    font_family="Pretendard"),
+                                    font_family="Galmuri"),
                         ],
                         spacing=4,
                         expand=True,
                     ),
                     ft.Column(
                         controls=[
-                            ft.Text(my_data["focus"], size=22, weight=ft.FontWeight.W_900,
-                                    color=ACCENT, font_family="JetBrains"),
-                            ft.Text("오늘 집중 시간", size=11, color=TEXT_MUTED,
-                                    font_family="Pretendard"),
+                            ft.Text(_fmt_min(my_data["focus_min"]), size=20,
+                                    weight=ft.FontWeight.W_400,
+                                    color=ACCENT, font_family="Galmuri"),
+                            ft.Text("오늘 집중 시간", size=11, color=TEXT_MUT,
+                                    font_family="Galmuri"),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.END,
                         spacing=2,
@@ -216,41 +282,40 @@ class RankingView:
                 spacing=16,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.only(left=20, top=16, right=20, bottom=16),
+            padding=ft.padding.only(left=20, top=14, right=20, bottom=14),
         )
 
         podium_card = card(
             ft.Column(
                 controls=[
-                    ft.Text("이번 주 TOP 3", size=15, weight=ft.FontWeight.W_700,
-                            color=TEXT_PRIMARY, font_family="Pretendard",
+                    ft.Text("이번 주 TOP 3", size=14, weight=ft.FontWeight.W_400,
+                            color=TEXT_PRI, font_family="Galmuri",
                             text_align=ft.TextAlign.CENTER),
-                    ft.Container(height=16),
+                    ft.Container(height=14),
                     self._podium(),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=24,
+            padding=20,
         )
 
         rank_list = ft.Column(
-            controls=[self._rank_row(i + 1, f) for i, f in enumerate(FRIENDS)],
+            controls=[self._rank_row(i + 1, f) for i, f in enumerate(self.friends)],
             spacing=8,
         )
 
-        # Period tabs
-        period_row = ft.Row(
+        period_tabs = ft.Row(
             controls=[
                 ft.Container(
-                    content=ft.Text(label, size=12, weight=ft.FontWeight.W_600,
-                                    color=ACCENT if i == 0 else TEXT_MUTED,
-                                    font_family="Pretendard"),
-                    bgcolor=ACCENT + "20" if i == 0 else "transparent",
-                    border=ft.border.all(1, ACCENT if i == 0 else BORDER),
+                    content=ft.Text(label, size=12, weight=ft.FontWeight.W_400,
+                                    color=ACCENT if label == self.period else TEXT_MUT,
+                                    font_family="Galmuri"),
+                    bgcolor=ACCENT_LT if label == self.period else BG_CARD,
+                    border=ft.border.all(1.5, ACCENT if label == self.period else BORDER),
                     border_radius=8,
-                    padding=ft.padding.only(left=16, top=7, right=16, bottom=7),
+                    padding=ft.padding.only(left=14, top=6, right=14, bottom=6),
                 )
-                for i, label in enumerate(["오늘", "이번 주", "이번 달", "전체"])
+                for label in ["오늘", "이번 주", "이번 달", "전체"]
             ],
             spacing=8,
         )
@@ -262,10 +327,10 @@ class RankingView:
                         controls=[
                             ft.Column(
                                 controls=[
-                                    ft.Text("친구 랭킹", size=26, weight=ft.FontWeight.W_900,
-                                            color=TEXT_PRIMARY, font_family="Pretendard"),
+                                    ft.Text("친구 랭킹", size=26, weight=ft.FontWeight.W_400,
+                                            color=TEXT_PRI, font_family="Galmuri"),
                                     ft.Text("오늘 누가 가장 집중했을까요?",
-                                            size=13, color=TEXT_MUTED, font_family="Pretendard"),
+                                            size=13, color=TEXT_SEC, font_family="Galmuri"),
                                 ],
                                 spacing=2,
                                 expand=True,
@@ -274,9 +339,9 @@ class RankingView:
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
-                    ft.Container(height=16),
+                    ft.Container(height=14),
                     my_card,
-                    ft.Container(height=12),
+                    ft.Container(height=10),
                     ft.Row(
                         controls=[
                             ft.Container(content=podium_card, expand=1),
@@ -284,8 +349,8 @@ class RankingView:
                             ft.Container(
                                 content=ft.Column(
                                     controls=[
-                                        period_row,
-                                        ft.Container(height=12),
+                                        period_tabs,
+                                        ft.Container(height=10),
                                         rank_list,
                                     ],
                                     spacing=0,
@@ -301,5 +366,5 @@ class RankingView:
             ),
             expand=True,
             padding=ft.padding.only(left=28, top=24, right=28, bottom=24),
-            bgcolor="#080B10",
+            bgcolor=BG_BASE,
         )

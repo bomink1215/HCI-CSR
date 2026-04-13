@@ -1,0 +1,56 @@
+[
+  {
+    "name": "김철수",
+    "sessions": 18,
+    "focus_min": 272,
+    "streak": 12,
+    "score": 97,
+    "avatar": "#00C9A7",
+    "me": false
+  },
+  {
+    "name": "이영희",
+    "sessions": 16,
+    "focus_min": 235,
+    "streak": 9,
+    "score": 89,
+    "avatar": "#9B8FFF",
+    "me": false
+  },
+  {
+    "name": "나 (박지수)",
+    "sessions": 14,
+    "focus_min": 200,
+    "streak": 5,
+    "score": 82,
+    "avatar": "#FF5C5C",
+    "me": true
+  },
+  {
+    "name": "최민준",
+    "sessions": 12,
+    "focus_min": 170,
+    "streak": 3,
+    "score": 75,
+    "avatar": "#FFB347",
+    "me": false
+  },
+  {
+    "name": "한소희",
+    "sessions": 10,
+    "focus_min": 130,
+    "streak": 7,
+    "score": 68,
+    "avatar": "#34D399",
+    "me": false
+  },
+  {
+    "name": "정우성",
+    "sessions": 8,
+    "focus_min": 105,
+    "streak": 2,
+    "score": 55,
+    "avatar": "#60A5FA",
+    "me": false
+  }
+]

@@ -1,15 +1,19 @@
 import flet as ft
-from components.ui import card, section_title, stat_chip, accent_btn, ghost_btn
+from components.ui import card, section_title, stat_chip, accent_btn, ghost_btn, mascot_widget
 from datetime import datetime
 
-BG_DARK = "#080B10"
-BG_CARD = "#0D1117"
-BG_CARD2 = "#131920"
-ACCENT = "#00E5CC"
-ACCENT2 = "#FF6B6B"
-TEXT_PRIMARY = "#E8EDF3"
-TEXT_MUTED = "#4A5568"
-BORDER = "#1A2332"
+BG_BASE   = "#FFFFFF"
+BG_CARD   = "#F4F6F8"
+BG_CARD2  = "#EAECEF"
+ACCENT    = "#00C9A7"
+ACCENT_LT = "#D6F5EF"
+ACCENT_DK = "#009E83"
+DANGER    = "#FF5C5C"
+WARNING   = "#FFB347"
+TEXT_PRI  = "#1A1D23"
+TEXT_SEC  = "#5A6375"
+TEXT_MUT  = "#9DA8B7"
+BORDER    = "#E2E6EC"
 
 
 class DashboardView:
@@ -17,39 +21,38 @@ class DashboardView:
         self.page = page
         self.navigate = navigate
 
-    def _posture_ring(self, score=78) -> ft.Stack:
-        """Circular posture score ring (mock SVG-style using ft.ProgressRing)"""
-        color = ACCENT if score >= 70 else ("#FFA500" if score >= 50 else "#FF6B6B")
-        return ft.Stack(
-            controls=[
-                ft.Container(
-                    content=ft.ProgressRing(
+    def _posture_ring(self, score=78) -> ft.Container:
+        color = ACCENT if score >= 70 else (WARNING if score >= 50 else DANGER)
+        return ft.Container(
+            width=110, height=110,
+            content=ft.Stack(
+                controls=[
+                    ft.ProgressRing(
                         value=score / 100,
-                        width=120, height=120,
+                        width=110, height=110,
                         stroke_width=10,
                         color=color,
-                        bgcolor="#1A2332",
+                        bgcolor="#E2E6EC",
                     ),
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Container(
-                    content=ft.Column(
-                        controls=[
-                            ft.Text(str(score), size=30, weight=ft.FontWeight.W_900,
-                                    color=color, font_family="Pretendard",
-                                    text_align=ft.TextAlign.CENTER),
-                            ft.Text("자세", size=11, color=TEXT_MUTED,
-                                    font_family="Pretendard",
-                                    text_align=ft.TextAlign.CENTER),
-                        ],
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                        spacing=0,
+                    ft.Container(
+                        width=110, height=110,
+                        alignment=ft.Alignment(0, 0),
+                        content=ft.Column(
+                            controls=[
+                                ft.Text(str(score), size=26, weight=ft.FontWeight.W_500,
+                                        color=color, font_family="GalmuriBold",
+                                        text_align=ft.TextAlign.CENTER),
+                                ft.Text("자세", size=11, color=TEXT_MUT,
+                                        font_family="Galmuri",
+                                        text_align=ft.TextAlign.CENTER),
+                            ],
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            spacing=2,
+                        ),
                     ),
-                    width=120, height=120,
-                    alignment=ft.Alignment(0, 0),
-                ),
-            ],
-            width=120, height=120,
+                ],
+            ),
         )
 
     def _today_tasks(self) -> ft.Column:
@@ -68,20 +71,20 @@ class DashboardView:
                             content=ft.Text(
                                 "\ue876" if done else "",
                                 font_family="Material Icons",
-                                size=14,
-                                color=ACCENT if done else "transparent",
+                                size=13,
+                                color="#FFFFFF" if done else "transparent",
                             ),
                             width=22, height=22,
                             border_radius=6,
-                            border=ft.border.all(1, ACCENT if done else "#2A3A4C"),
-                            bgcolor="#0A1F1C" if done else "transparent",
+                            border=ft.border.all(1.5, ACCENT if done else BORDER),
+                            bgcolor=ACCENT if done else "transparent",
                             alignment=ft.Alignment(0, 0),
                         ),
                         ft.Text(
                             label,
                             size=13,
-                            color=TEXT_MUTED if done else TEXT_PRIMARY,
-                            font_family="Pretendard",
+                            color=TEXT_MUT if done else TEXT_PRI,
+                            font_family="Galmuri",
                             expand=True,
                             spans=[
                                 ft.TextSpan(
@@ -103,19 +106,21 @@ class DashboardView:
         bars = []
         for i, (d, v) in enumerate(zip(days, values)):
             is_today = i == today_idx
-            bar_h = max(4, int(v * 0.7))
+            bar_h = max(4, int(v * 0.65))
             bars.append(
                 ft.Column(
                     controls=[
                         ft.Container(
-                            width=24,
+                            width=22,
                             height=bar_h,
-                            bgcolor=ACCENT if is_today else ("#1E3A3A" if v > 0 else "#1A2332"),
+                            bgcolor=ACCENT if is_today else (BG_CARD2 if v > 0 else BORDER),
                             border_radius=4,
+                            shadow=ft.BoxShadow(blur_radius=6, color=ACCENT + "44",
+                                                offset=ft.Offset(0, 2)) if is_today else None,
                         ),
                         ft.Text(d, size=10,
-                                color=ACCENT if is_today else TEXT_MUTED,
-                                font_family="Pretendard",
+                                color=ACCENT if is_today else TEXT_MUT,
+                                font_family="Galmuri",
                                 text_align=ft.TextAlign.CENTER),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -135,7 +140,47 @@ class DashboardView:
             else "오늘도 수고하셨어요! 🌙"
         )
 
-        # ── Top row: posture + stats ───────────────────────────
+        # ── 마스코트 + 인사 헤더 ───────────────────────────────
+        header = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Column(
+                        controls=[
+                            ft.Text(greeting, size=13, color=TEXT_SEC,
+                                    font_family="Galmuri"),
+                            ft.Text("오늘의 현황", size=26, weight=ft.FontWeight.W_400,
+                                    color=TEXT_PRI, font_family="Galmuri"),
+                            ft.Text(now.strftime("%Y년 %m월 %d일"),
+                                    size=12, color=TEXT_MUT, font_family="Galmuri"),
+                        ],
+                        spacing=3,
+                        expand=True,
+                    ),
+                    # 픽셀아트 마스코트
+                    ft.Container(
+                        content=ft.Column(
+                            controls=[
+                                mascot_widget(64),
+                                ft.Text("FocusMate", size=9, color=TEXT_MUT,
+                                        font_family="Galmuri",
+                                        text_align=ft.TextAlign.CENTER),
+                            ],
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            spacing=4,
+                        ),
+                        padding=ft.padding.only(right=4),
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            bgcolor=ACCENT_LT,
+            border_radius=16,
+            padding=ft.padding.only(left=24, top=18, right=20, bottom=18),
+            border=ft.border.all(1, ACCENT + "40"),
+        )
+
+        # ── 자세 카드 ────────────────────────────────────────────
         posture_card = card(
             ft.Column(
                 controls=[
@@ -143,14 +188,14 @@ class DashboardView:
                         controls=[
                             ft.Column(
                                 controls=[
-                                    ft.Text("오늘의 자세 점수", size=13,
-                                            color=TEXT_MUTED, font_family="Pretendard"),
-                                    ft.Text("양호", size=22, weight=ft.FontWeight.W_800,
-                                            color=ACCENT, font_family="Pretendard"),
+                                    ft.Text("오늘의 자세 점수", size=12,
+                                            color=TEXT_MUT, font_family="Galmuri"),
+                                    ft.Text("양호 👍", size=20, weight=ft.FontWeight.W_400,
+                                            color=ACCENT, font_family="Galmuri"),
                                     ft.Container(height=4),
-                                    ft.Text("지난 1시간 평균 78점\n지속적으로 모니터링 중",
-                                            size=11, color=TEXT_MUTED,
-                                            font_family="Pretendard"),
+                                    ft.Text("지난 1시간 평균 78점",
+                                            size=11, color=TEXT_SEC,
+                                            font_family="Galmuri"),
                                 ],
                                 spacing=4,
                                 expand=True,
@@ -160,25 +205,24 @@ class DashboardView:
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
-                    ft.Container(height=12),
+                    ft.Container(height=10),
                     ft.Container(
                         content=ft.Row(
                             controls=[
                                 ft.Container(
-                                    width=8, height=8,
+                                    width=7, height=7,
                                     bgcolor=ACCENT,
                                     border_radius=4,
-                                    animate=ft.Animation(800, ft.AnimationCurve.EASE_IN_OUT),
                                 ),
                                 ft.Text("실시간 감지 중", size=11, color=ACCENT,
-                                        font_family="Pretendard"),
+                                        font_family="Galmuri"),
                             ],
                             spacing=6,
                         ),
-                        bgcolor="#071A17",
+                        bgcolor=ACCENT_LT,
                         border_radius=8,
-                        padding=ft.padding.only(left=12, top=8, right=12, bottom=8),
-                        border=ft.border.all(1, "#0D3330"),
+                        padding=ft.padding.only(left=12, top=7, right=12, bottom=7),
+                        border=ft.border.all(1, ACCENT + "40"),
                     ),
                 ],
                 spacing=0,
@@ -191,33 +235,33 @@ class DashboardView:
                 ft.Row(
                     controls=[
                         stat_chip("집중 세션", "7회", ACCENT),
-                        stat_chip("총 집중", "3h 20m", "#A78BFA"),
+                        stat_chip("총 집중", "3h 20m", "#9B8FFF"),
                     ],
                     spacing=12,
                 ),
-                stat_chip("연속 집중일", "🔥 5일", ACCENT2),
+                stat_chip("연속 집중일", "🔥 5일", DANGER),
             ],
             spacing=12,
             expand=True,
         )
 
         top_row = ft.Row(
-            controls=[posture_card, ft.Container(width=16), stats_col],
+            controls=[posture_card, ft.Container(width=14), stats_col],
             vertical_alignment=ft.CrossAxisAlignment.START,
         )
 
-        # ── Middle row: today tasks + pomodoro quick ───────────
+        # ── 할 일 + 뽀모도로 빠른 실행 ───────────────────────────
         todo_card = card(
             ft.Column(
                 controls=[
                     ft.Row(
                         controls=[
-                            ft.Text("오늘의 할 일", size=15, weight=ft.FontWeight.W_700,
-                                    color=TEXT_PRIMARY, font_family="Pretendard"),
+                            ft.Text("오늘의 할 일", size=14, weight=ft.FontWeight.W_400,
+                                    color=TEXT_PRI, font_family="Galmuri"),
                             ft.Container(
                                 content=ft.Text("4개", size=11, color=ACCENT,
-                                                font_family="Pretendard"),
-                                bgcolor="#071A17",
+                                                font_family="Galmuri"),
+                                bgcolor=ACCENT_LT,
                                 border_radius=10,
                                 padding=ft.padding.only(left=8, top=3, right=8, bottom=3),
                             ),
@@ -226,7 +270,7 @@ class DashboardView:
                     ),
                     ft.Container(height=12),
                     self._today_tasks(),
-                    ft.Container(height=8),
+                    ft.Container(height=10),
                     ghost_btn("모두 보기", on_click=lambda _: self.navigate("todo"),
                               icon="\ue5c8"),
                 ],
@@ -238,14 +282,14 @@ class DashboardView:
         pomodoro_quick = card(
             ft.Column(
                 controls=[
-                    ft.Text("뽀모도로", size=15, weight=ft.FontWeight.W_700,
-                            color=TEXT_PRIMARY, font_family="Pretendard"),
-                    ft.Container(height=12),
-                    ft.Text("25:00", size=44, weight=ft.FontWeight.W_900,
-                            color=ACCENT, font_family="JetBrains",
+                    ft.Text("뽀모도로", size=14, weight=ft.FontWeight.W_400,
+                            color=TEXT_PRI, font_family="Galmuri"),
+                    ft.Container(height=10),
+                    ft.Text("25:00", size=40, weight=ft.FontWeight.W_400,
+                            color=ACCENT, font_family="Galmuri",
                             text_align=ft.TextAlign.CENTER),
-                    ft.Text("세션 준비됨", size=12, color=TEXT_MUTED,
-                            font_family="Pretendard",
+                    ft.Text("세션 준비됨", size=12, color=TEXT_MUT,
+                            font_family="Galmuri",
                             text_align=ft.TextAlign.CENTER),
                     ft.Container(height=12),
                     accent_btn("시작하기", on_click=lambda _: self.navigate("pomodoro"),
@@ -258,27 +302,32 @@ class DashboardView:
         )
 
         mid_row = ft.Row(
-            controls=[todo_card, ft.Container(width=16), pomodoro_quick],
+            controls=[todo_card, ft.Container(width=14), pomodoro_quick],
             vertical_alignment=ft.CrossAxisAlignment.START,
         )
 
-        # ── Bottom row: weekly chart + ranking preview ─────────
+        # ── 주간 차트 + 랭킹 미리보기 ────────────────────────────
         weekly_card = card(
             ft.Column(
                 controls=[
                     ft.Row(
                         controls=[
-                            ft.Text("이번 주 집중도", size=15, weight=ft.FontWeight.W_700,
-                                    color=TEXT_PRIMARY, font_family="Pretendard"),
-                            ft.Text("평균 78점", size=12, color=ACCENT,
-                                    font_family="Pretendard"),
+                            ft.Text("이번 주 집중도", size=14, weight=ft.FontWeight.W_400,
+                                    color=TEXT_PRI, font_family="Galmuri"),
+                            ft.Container(
+                                content=ft.Text("평균 78점", size=11, color=ACCENT,
+                                                font_family="Galmuri"),
+                                bgcolor=ACCENT_LT,
+                                border_radius=8,
+                                padding=ft.padding.only(left=8, top=3, right=8, bottom=3),
+                            ),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
                     ft.Container(height=14),
                     ft.Container(
                         content=self._weekly_bar(),
-                        height=70,
+                        height=68,
                         alignment=ft.Alignment(0, 1),
                     ),
                 ],
@@ -289,30 +338,30 @@ class DashboardView:
         rank_preview = card(
             ft.Column(
                 controls=[
-                    ft.Text("친구 랭킹", size=15, weight=ft.FontWeight.W_700,
-                            color=TEXT_PRIMARY, font_family="Pretendard"),
+                    ft.Text("친구 랭킹", size=14, weight=ft.FontWeight.W_400,
+                            color=TEXT_PRI, font_family="Galmuri"),
                     ft.Container(height=10),
                     *[
                         ft.Row(
                             controls=[
                                 ft.Text(medal, size=16),
                                 ft.Container(
-                                    content=ft.Text(name[0], size=12,
-                                                    color="#080B10", font_family="Pretendard"),
+                                    content=ft.Text(name[0], size=11,
+                                                    color="#FFFFFF", font_family="Galmuri"),
                                     width=26, height=26, border_radius=13,
                                     bgcolor=color, alignment=ft.Alignment(0, 0),
                                 ),
-                                ft.Text(name, size=13, color=TEXT_PRIMARY,
-                                        font_family="Pretendard", expand=True),
-                                ft.Text(time_, size=12, color=TEXT_MUTED,
-                                        font_family="JetBrains"),
+                                ft.Text(name, size=13, color=TEXT_PRI,
+                                        font_family="Galmuri", expand=True),
+                                ft.Text(time_, size=12, color=TEXT_SEC,
+                                        font_family="Galmuri"),
                             ],
                             spacing=8,
                         )
                         for medal, name, time_, color in [
                             ("🥇", "김철수", "4h 32m", ACCENT),
-                            ("🥈", "이영희", "3h 55m", "#A78BFA"),
-                            ("🥉", "나", "3h 20m", ACCENT2),
+                            ("🥈", "이영희", "3h 55m", "#9B8FFF"),
+                            ("🥉", "나", "3h 20m", DANGER),
                         ]
                     ],
                     ft.Container(height=4),
@@ -325,28 +374,8 @@ class DashboardView:
         )
 
         bottom_row = ft.Row(
-            controls=[weekly_card, ft.Container(width=16), rank_preview],
+            controls=[weekly_card, ft.Container(width=14), rank_preview],
             vertical_alignment=ft.CrossAxisAlignment.START,
-        )
-
-        # ── Page header ────────────────────────────────────────
-        header = ft.Row(
-            controls=[
-                ft.Column(
-                    controls=[
-                        ft.Text(greeting, size=13, color=TEXT_MUTED,
-                                font_family="Pretendard"),
-                        ft.Text("오늘의 현황", size=26, weight=ft.FontWeight.W_900,
-                                color=TEXT_PRIMARY, font_family="Pretendard"),
-                    ],
-                    spacing=2,
-                ),
-                ft.Container(
-                    content=ft.Text(now.strftime("%m월 %d일 %A"),
-                                    size=12, color=TEXT_MUTED, font_family="Pretendard"),
-                ),
-            ],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
 
         return ft.Container(
@@ -355,14 +384,14 @@ class DashboardView:
                     header,
                     ft.Container(height=16),
                     top_row,
-                    ft.Container(height=14),
+                    ft.Container(height=12),
                     mid_row,
-                    ft.Container(height=14),
+                    ft.Container(height=12),
                     bottom_row,
                 ],
                 scroll=ft.ScrollMode.AUTO,
             ),
             expand=True,
             padding=ft.padding.only(left=28, top=24, right=28, bottom=24),
-            bgcolor="#080B10",
+            bgcolor=BG_BASE,
         )
