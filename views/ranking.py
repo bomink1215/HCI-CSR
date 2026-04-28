@@ -104,7 +104,7 @@ class RankingView:
                         ft.Text(medal, size=26, text_align=ft.TextAlign.CENTER),
                         ft.Container(
                             content=ft.Text(f["name"][0], size=16,
-                                            color="#FFFFFF", font_family="Galmuri",
+                                            color="#FFFFFF", font_family="DOSSaemmul",
                                             weight=ft.FontWeight.W_400),
                             width=44, height=44,
                             border_radius=22,
@@ -114,11 +114,11 @@ class RankingView:
                                                 offset=ft.Offset(0, 2)),
                         ),
                         ft.Text(f["name"].split("(")[0].strip(), size=11, color=TEXT_PRI,
-                                font_family="Galmuri",
+                                font_family="DOSSaemmul",
                                 text_align=ft.TextAlign.CENTER,
                                 weight=ft.FontWeight.W_400),
                         ft.Text(_fmt_min(f["focus_min"]), size=10, color=TEXT_MUT,
-                                font_family="Galmuri",
+                                font_family="DOSSaemmul",
                                 text_align=ft.TextAlign.CENTER),
                         ft.Container(
                             width=72, height=h,
@@ -129,7 +129,7 @@ class RankingView:
                             content=ft.Text(f"#{ri + 1}", size=15,
                                             color=bar_color,
                                             weight=ft.FontWeight.W_400,
-                                            font_family="Galmuri"),
+                                            font_family="DOSSaemmul"),
                         ),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -157,14 +157,14 @@ class RankingView:
                             ft.Container(
                                 content=ft.Text(medal, size=13 if rank <= 3 else 11,
                                                 color=ACCENT if is_me else TEXT_MUT,
-                                                font_family="Galmuri",
+                                                font_family="DOSSaemmul",
                                                 weight=ft.FontWeight.W_400),
                                 width=34,
                                 alignment=ft.Alignment(0, 0),
                             ),
                             ft.Container(
                                 content=ft.Text(friend["name"][0], size=12,
-                                                color="#FFFFFF", font_family="Galmuri"),
+                                                color="#FFFFFF", font_family="DOSSaemmul"),
                                 width=30, height=30,
                                 border_radius=15,
                                 bgcolor=friend["avatar"],
@@ -176,12 +176,12 @@ class RankingView:
                                         controls=[
                                             ft.Text(friend["name"], size=13,
                                                     color=ACCENT if is_me else TEXT_PRI,
-                                                    font_family="Galmuri",
+                                                    font_family="DOSSaemmul",
                                                     weight=ft.FontWeight.W_400 if is_me else ft.FontWeight.W_400),
                                             *(
                                                 [ft.Container(
                                                     content=ft.Text("나", size=9, color="#FFFFFF",
-                                                                    font_family="Galmuri"),
+                                                                    font_family="DOSSaemmul"),
                                                     bgcolor=ACCENT, border_radius=4,
                                                     padding=ft.padding.only(left=5, top=1, right=5, bottom=1),
                                                 )]
@@ -193,9 +193,9 @@ class RankingView:
                                     ft.Row(
                                         controls=[
                                             ft.Text(f"🔥 {friend['streak']}일", size=11,
-                                                    color=TEXT_MUT, font_family="Galmuri"),
+                                                    color=TEXT_MUT, font_family="DOSSaemmul"),
                                             ft.Text(f"세션 {friend['sessions']}회", size=11,
-                                                    color=TEXT_MUT, font_family="Galmuri"),
+                                                    color=TEXT_MUT, font_family="DOSSaemmul"),
                                         ],
                                         spacing=10,
                                     ),
@@ -207,10 +207,10 @@ class RankingView:
                                 controls=[
                                     ft.Text(_fmt_min(friend["focus_min"]), size=14,
                                             color=ACCENT if is_me else TEXT_PRI,
-                                            font_family="Galmuri",
+                                            font_family="DOSSaemmul",
                                             weight=ft.FontWeight.W_400),
                                     ft.Text("집중시간", size=10, color=TEXT_MUT,
-                                            font_family="Galmuri"),
+                                            font_family="DOSSaemmul"),
                                 ],
                                 horizontal_alignment=ft.CrossAxisAlignment.END,
                                 spacing=2,
@@ -248,7 +248,7 @@ class RankingView:
                 controls=[
                     ft.Container(
                         content=ft.Text(my_data["name"][0], size=20,
-                                        color="#FFFFFF", font_family="GalmuriBold",
+                                        color="#FFFFFF", font_family="DOSSaemmul",
                                         weight=ft.FontWeight.W_400),
                         width=52, height=52,
                         border_radius=26,
@@ -260,9 +260,9 @@ class RankingView:
                     ft.Column(
                         controls=[
                             ft.Text(my_data["name"], size=15, weight=ft.FontWeight.W_400,
-                                    color=TEXT_PRI, font_family="Galmuri"),
+                                    color=TEXT_PRI, font_family="DOSSaemmul"),
                             ft.Text(f"현재 #{my_rank}위", size=13, color=ACCENT,
-                                    font_family="Galmuri"),
+                                    font_family="DOSSaemmul"),
                         ],
                         spacing=4,
                         expand=True,
@@ -271,9 +271,9 @@ class RankingView:
                         controls=[
                             ft.Text(_fmt_min(my_data["focus_min"]), size=20,
                                     weight=ft.FontWeight.W_400,
-                                    color=ACCENT, font_family="Galmuri"),
+                                    color=ACCENT, font_family="DOSSaemmul"),
                             ft.Text("오늘 집중 시간", size=11, color=TEXT_MUT,
-                                    font_family="Galmuri"),
+                                    font_family="DOSSaemmul"),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.END,
                         spacing=2,
@@ -289,7 +289,7 @@ class RankingView:
             ft.Column(
                 controls=[
                     ft.Text("이번 주 TOP 3", size=14, weight=ft.FontWeight.W_400,
-                            color=TEXT_PRI, font_family="Galmuri",
+                            color=TEXT_PRI, font_family="DOSSaemmul",
                             text_align=ft.TextAlign.CENTER),
                     ft.Container(height=14),
                     self._podium(),
@@ -309,7 +309,7 @@ class RankingView:
                 ft.Container(
                     content=ft.Text(label, size=12, weight=ft.FontWeight.W_400,
                                     color=ACCENT if label == self.period else TEXT_MUT,
-                                    font_family="Galmuri"),
+                                    font_family="DOSSaemmul"),
                     bgcolor=ACCENT_LT if label == self.period else BG_CARD,
                     border=ft.border.all(1.5, ACCENT if label == self.period else BORDER),
                     border_radius=8,
@@ -328,9 +328,9 @@ class RankingView:
                             ft.Column(
                                 controls=[
                                     ft.Text("친구 랭킹", size=26, weight=ft.FontWeight.W_400,
-                                            color=TEXT_PRI, font_family="Galmuri"),
+                                            color=TEXT_PRI, font_family="DOSSaemmul"),
                                     ft.Text("오늘 누가 가장 집중했을까요?",
-                                            size=13, color=TEXT_SEC, font_family="Galmuri"),
+                                            size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
                                 ],
                                 spacing=2,
                                 expand=True,

@@ -230,7 +230,7 @@ class PostureView:
                 self.fps_ref.current.value = f"{fps} FPS"
             if self.issue_col_ref.current:
                 self.issue_col_ref.current.controls = [
-                    ft.Text(f"• {i}", size=11, color=DANGER, font_family="Galmuri")
+                    ft.Text(f"• {i}", size=11, color=DANGER, font_family="DOSSaemmul")
                     for i in issues[1:]
                 ]
             self.page.update()
@@ -306,10 +306,10 @@ class PostureView:
                             controls=[
                                 ft.Text(ref=self.score_ref, value="--",
                                         size=36, weight=ft.FontWeight.W_500,
-                                        color=ACCENT, font_family="GalmuriBold",
+                                        color=ACCENT, font_family="DOSSaemmul",
                                         text_align=ft.TextAlign.CENTER),
                                 ft.Text("자세 점수", size=11, color=TEXT_MUT,
-                                        font_family="Galmuri",
+                                        font_family="DOSSaemmul",
                                         text_align=ft.TextAlign.CENTER),
                             ],
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -336,7 +336,7 @@ class PostureView:
                 controls=[
                     ft.Text("\ue3a5", font_family="Material Icons", size=52, color=BORDER),
                     ft.Text("모니터링 시작 버튼을 누르면\nOpenCV 창이 열립니다",
-                            size=14, color=TEXT_MUT, font_family="Galmuri",
+                            size=14, color=TEXT_MUT, font_family="DOSSaemmul",
                             text_align=ft.TextAlign.CENTER),
                     ft.Container(height=8),
                     ft.Container(
@@ -347,11 +347,11 @@ class PostureView:
                                              border_radius=4),
                                 ft.Text(ref=self.cam_label_ref,
                                         value="카메라 꺼짐", size=12,
-                                        color=DANGER, font_family="Galmuri"),
+                                        color=DANGER, font_family="DOSSaemmul"),
                                 ft.Container(expand=True),
                                 ft.Text(ref=self.fps_ref, value="",
                                         size=11, color=TEXT_MUT,
-                                        font_family="Galmuri"),
+                                        font_family="DOSSaemmul"),
                             ],
                             spacing=6,
                         ),
@@ -380,7 +380,7 @@ class PostureView:
                     ft.Text(
                         "pose_landmarker.task 파일 없음!\n"
                         "터미널: curl -o pose_landmarker.task \"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task\"",
-                        size=11, color=WARNING, font_family="Galmuri",
+                        size=11, color=WARNING, font_family="DOSSaemmul",
                     ),
                 ],
                 spacing=8,
@@ -400,7 +400,7 @@ class PostureView:
                     ft.Column(
                         controls=[
                             ft.Text("실시간 점수", size=14, weight=ft.FontWeight.W_400,
-                                    color=TEXT_PRI, font_family="Galmuri"),
+                                    color=TEXT_PRI, font_family="DOSSaemmul"),
                             ft.Container(height=14),
                             ft.Container(content=self._score_ring(),
                                          alignment=ft.Alignment(0, 0)),
@@ -408,7 +408,7 @@ class PostureView:
                             ft.Text(ref=self.status_ref,
                                     value="모니터링을 시작해주세요",
                                     size=12, color=TEXT_MUT,
-                                    font_family="Galmuri",
+                                    font_family="DOSSaemmul",
                                     text_align=ft.TextAlign.CENTER),
                             ft.Container(height=4),
                             issue_col,
@@ -421,7 +421,7 @@ class PostureView:
                     ft.Column(
                         controls=[
                             ft.Text("자세 체크리스트", size=13, weight=ft.FontWeight.W_400,
-                                    color=TEXT_PRI, font_family="Galmuri"),
+                                    color=TEXT_PRI, font_family="DOSSaemmul"),
                             ft.Container(height=6),
                             *[
                                 ft.Row(controls=[
@@ -433,9 +433,9 @@ class PostureView:
                                     ),
                                     ft.Column(controls=[
                                         ft.Text(t, size=12, color=TEXT_PRI,
-                                                font_family="Galmuri"),
+                                                font_family="DOSSaemmul"),
                                         ft.Text(d, size=10, color=TEXT_MUT,
-                                                font_family="Galmuri"),
+                                                font_family="DOSSaemmul"),
                                     ], spacing=1),
                                 ], spacing=8)
                                 for t, d in tips
@@ -451,7 +451,7 @@ class PostureView:
                             ft.Text("\ue037", font_family="Material Icons",
                                     size=18, color="#FFFFFF"),
                             ft.Text("모니터링 시작", size=14, weight=ft.FontWeight.W_400,
-                                    color="#FFFFFF", font_family="Galmuri"),
+                                    color="#FFFFFF", font_family="DOSSaemmul"),
                         ],
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=8,
@@ -478,9 +478,9 @@ class PostureView:
                     ),
                     ft.Column(controls=[
                         ft.Text(t, size=13, weight=ft.FontWeight.W_400,
-                                color=TEXT_PRI, font_family="Galmuri"),
+                                color=TEXT_PRI, font_family="DOSSaemmul"),
                         ft.Text(d, size=11, color=TEXT_SEC,
-                                font_family="Galmuri"),
+                                font_family="DOSSaemmul"),
                     ], spacing=2, expand=True),
                 ], spacing=12))
                 for t, d in tips
@@ -492,9 +492,9 @@ class PostureView:
             controls=[
                 ft.Column(controls=[
                     ft.Text("자세 교정", size=26, weight=ft.FontWeight.W_400,
-                            color=TEXT_PRI, font_family="Galmuri"),
+                            color=TEXT_PRI, font_family="DOSSaemmul"),
                     ft.Text("OpenCV 창에서 실시간 자세 분석 · 점수는 앱에 표시",
-                            size=13, color=TEXT_SEC, font_family="Galmuri"),
+                            size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
                 ], spacing=2),
                 ft.Container(height=12),
                 model_warning,
@@ -502,7 +502,7 @@ class PostureView:
                 preview_box,
                 ft.Container(height=16),
                 ft.Text("교정 팁", size=14, weight=ft.FontWeight.W_400,
-                        color=TEXT_PRI, font_family="Galmuri"),
+                        color=TEXT_PRI, font_family="DOSSaemmul"),
                 ft.Container(height=8),
                 tip_cards,
             ],

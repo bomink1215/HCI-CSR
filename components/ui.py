@@ -23,8 +23,8 @@ RADIUS    = 14
 RADIUS_SM = 8
 
 # ── 폰트 상수 (한 곳에서 관리) ───────────────────────────────────
-FONT      = "Galmuri"   # 본문 폰트
-FONT_MONO = "Galmuri"      # 숫자/코드 폰트
+FONT      = "DOSSaemmul"   # 본문 폰트
+FONT_MONO = "DOSSaemmul"      # 숫자/코드 폰트
 
 # W300 기준 weight 매핑
 W_LIGHT   = ft.FontWeight.W_400   # 기본 본문

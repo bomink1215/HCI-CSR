@@ -9,7 +9,7 @@ from utils.alert_manager import start_alert_daemon
 
 APP_THEME = ft.Theme(
     color_scheme_seed="#00C9A7",
-    font_family="Galmuri",
+    font_family="DOSSaemmul",
 )
 
 BG_BASE = "#FFFFFF"
@@ -25,9 +25,7 @@ def main(page: ft.Page):
     page.window_min_height = 620
     page.padding = 0
     page.fonts = {
-        "Galmuri":     "fonts/Galmuri11.ttf",
-        "GalmuriBold": "fonts/Galmuri11-Bold.ttf",
-        
+        "DOSSaemmul": "fonts/DOSSaemmul.ttf",
     }
 
     current_view_name = ["dashboard"]

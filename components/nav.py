@@ -50,9 +50,9 @@ class NavBar:
         label_text = ft.Text(
             label,
             size=10,
-            weight=ft.FontWeight.W_300,
+            weight=ft.FontWeight.W_400,
             color=ACCENT if is_active else TEXT_MUT,
-            font_family="GmarketSans",
+            font_family="DOSSaemmul",
         )
 
         btn = ft.Container(
@@ -101,8 +101,8 @@ class NavBar:
             content=ft.Column(
                 controls=[
                     ft.Container(
-                        content=ft.Text("F", size=20, weight=ft.FontWeight.W_300,
-                                        color="#FFFFFF", font_family="GmarketSans"),
+                        content=ft.Text("F", size=20, weight=ft.FontWeight.W_400,
+                                        color="#FFFFFF", font_family="DOSSaemmul"),
                         width=38, height=38,
                         bgcolor=ACCENT,
                         border_radius=12,
@@ -111,8 +111,8 @@ class NavBar:
                                             offset=ft.Offset(0, 3)),
                     ),
                     ft.Text("Focus\nMate", size=10, color=ACCENT,
-                            weight=ft.FontWeight.W_300, text_align=ft.TextAlign.CENTER,
-                            font_family="GmarketSans"),
+                            weight=ft.FontWeight.W_400, text_align=ft.TextAlign.CENTER,
+                            font_family="DOSSaemmul"),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=6,
@@ -131,7 +131,7 @@ class NavBar:
             content=ft.Column(
                 controls=[
                     ft.Text("\ue8b8", font_family="Material Icons", size=20, color=TEXT_MUT),
-                    ft.Text("설정", size=10, color=TEXT_MUT, font_family="GmarketSans"),
+                    ft.Text("설정", size=10, color=TEXT_MUT, font_family="DOSSaemmul"),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=2,

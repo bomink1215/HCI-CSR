@@ -79,7 +79,7 @@ class TodoView:
                 color = TEXT_MUT
                 label = f"D-{delta}"
             return ft.Container(
-                content=ft.Text(label, size=10, color=color, font_family="Galmuri"),
+                content=ft.Text(label, size=10, color=color, font_family="DOSSaemmul"),
                 bgcolor=color + "18",
                 border_radius=4,
                 padding=ft.padding.only(left=6, top=2, right=6, bottom=2),
@@ -111,14 +111,14 @@ class TodoView:
         chips = [
             ft.Container(
                 content=ft.Text(task["cat"], size=10, color=ccolor,
-                                font_family="Galmuri"),
+                                font_family="DOSSaemmul"),
                 bgcolor=ccolor + "18",
                 border_radius=4,
                 padding=ft.padding.only(left=6, top=2, right=6, bottom=2),
             ),
             ft.Container(
                 content=ft.Text(task["priority"], size=10, color=pcolor,
-                                font_family="Galmuri"),
+                                font_family="DOSSaemmul"),
                 bgcolor=pcolor + "18",
                 border_radius=4,
                 padding=ft.padding.only(left=6, top=2, right=6, bottom=2),
@@ -130,7 +130,7 @@ class TodoView:
             chips.append(due_chip)
         if task["note"]:
             chips.append(ft.Text(task["note"], size=11, color=TEXT_MUT,
-                                 font_family="Galmuri"))
+                                 font_family="DOSSaemmul"))
 
         return ft.Container(
             content=ft.Row(
@@ -155,7 +155,7 @@ class TodoView:
                                 task["title"],
                                 size=14,
                                 color=TEXT_MUT if done else TEXT_PRI,
-                                font_family="Galmuri",
+                                font_family="DOSSaemmul",
                                 weight=ft.FontWeight.W_400,
                                 expand=True,
                                 spans=[
@@ -221,7 +221,7 @@ class TodoView:
         return ft.Container(
             content=ft.Text(label, size=12, weight=ft.FontWeight.W_400,
                             color=color if is_active else TEXT_MUT,
-                            font_family="Galmuri"),
+                            font_family="DOSSaemmul"),
             bgcolor=color + "18" if is_active else BG_CARD,
             border=ft.border.all(1.5, color if is_active else BORDER),
             border_radius=8,
@@ -238,16 +238,16 @@ class TodoView:
                 ft.Column(
                     controls=[
                         ft.Text(str(total_count), size=26, weight=ft.FontWeight.W_400,
-                                color=TEXT_PRI, font_family="Galmuri"),
-                        ft.Text("전체", size=11, color=TEXT_MUT, font_family="Galmuri"),
+                                color=TEXT_PRI, font_family="DOSSaemmul"),
+                        ft.Text("전체", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 ft.Column(
                     controls=[
                         ft.Text(str(done_count), size=26, weight=ft.FontWeight.W_400,
-                                color=ACCENT, font_family="Galmuri"),
-                        ft.Text("완료", size=11, color=TEXT_MUT, font_family="Galmuri"),
+                                color=ACCENT, font_family="DOSSaemmul"),
+                        ft.Text("완료", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
@@ -255,8 +255,8 @@ class TodoView:
                     controls=[
                         ft.Text(str(total_count - done_count), size=26,
                                 weight=ft.FontWeight.W_400, color=DANGER,
-                                font_family="Galmuri"),
-                        ft.Text("남음", size=11, color=TEXT_MUT, font_family="Galmuri"),
+                                font_family="DOSSaemmul"),
+                        ft.Text("남음", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
@@ -265,8 +265,8 @@ class TodoView:
                     controls=[
                         ft.Text(f"{int(done_count / total_count * 100) if total_count else 0}%",
                                 size=26, weight=ft.FontWeight.W_400,
-                                color=PURPLE, font_family="Galmuri"),
-                        ft.Text("달성률", size=11, color=TEXT_MUT, font_family="Galmuri"),
+                                color=PURPLE, font_family="DOSSaemmul"),
+                        ft.Text("달성률", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
@@ -319,9 +319,9 @@ class TodoView:
             content=ft.Column(
                 controls=[
                     ft.Text("할 일 메모", size=26, weight=ft.FontWeight.W_400,
-                            color=TEXT_PRI, font_family="Galmuri"),
+                            color=TEXT_PRI, font_family="DOSSaemmul"),
                     ft.Text("오늘 할 일을 관리해보세요",
-                            size=13, color=TEXT_SEC, font_family="Galmuri"),
+                            size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
                     ft.Container(height=14),
                     card(
                         ft.Column(

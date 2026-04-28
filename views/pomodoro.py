@@ -177,10 +177,10 @@ class PomodoroView:
                     controls=[
                         mascot_widget(56),
                         ft.Text("세션 완료! 🎉", size=18, weight=ft.FontWeight.W_400,
-                                color=ACCENT, font_family="Galmuri",
+                                color=ACCENT, font_family="DOSSaemmul",
                                 text_align=ft.TextAlign.CENTER),
                         ft.Text(f"다음: {next_label} 세션",
-                                size=13, color=TEXT_SEC, font_family="Galmuri",
+                                size=13, color=TEXT_SEC, font_family="DOSSaemmul",
                                 text_align=ft.TextAlign.CENTER),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -220,7 +220,7 @@ class PomodoroView:
         return ft.Container(
             content=ft.Text(cfg["label"], size=12, weight=ft.FontWeight.W_400,
                             color=cfg["color"] if is_active else TEXT_MUT,
-                            font_family="Galmuri"),
+                            font_family="DOSSaemmul"),
             bgcolor=ACCENT_LT if is_active else "transparent",
             border_radius=8,
             padding=ft.padding.only(left=14, top=7, right=14, bottom=7),
@@ -256,12 +256,12 @@ class PomodoroView:
                                 border_radius=4,
                             ),
                             ft.Text(mode_l, size=13, color=TEXT_PRI,
-                                    font_family="Galmuri", expand=True),
+                                    font_family="DOSSaemmul", expand=True),
                             ft.Text(f"{start} → {end}", size=11, color=TEXT_MUT,
-                                    font_family="Galmuri"),
+                                    font_family="DOSSaemmul"),
                             ft.Container(
                                 content=ft.Text("완료", size=10, color=ACCENT,
-                                                font_family="Galmuri"),
+                                                font_family="DOSSaemmul"),
                                 bgcolor=ACCENT_LT,
                                 border_radius=6,
                                 padding=ft.padding.only(left=8, top=3, right=8, bottom=3),
@@ -319,14 +319,14 @@ class PomodoroView:
                                                 value=self._fmt(self.remaining),
                                                 size=50, weight=ft.FontWeight.W_500,
                                                 color=TEXT_PRI,
-                                                font_family="Galmuri",
+                                                font_family="DOSSaemmul",
                                                 text_align=ft.TextAlign.CENTER,
                                             ),
                                             ft.Text(
                                                 ref=self.mode_label_ref,
                                                 value=cfg["label"],
                                                 size=13, color=TEXT_MUT,
-                                                font_family="GalmuriBold",
+                                                font_family="DOSSaemmul",
                                                 text_align=ft.TextAlign.CENTER,
                                             ),
                                         ],
@@ -342,7 +342,7 @@ class PomodoroView:
                     self._session_dots(),
                     ft.Text("세션 진행 (8회 사이클)",
                             size=11, color=TEXT_MUT,
-                            font_family="Galmuri",
+                            font_family="DOSSaemmul",
                             text_align=ft.TextAlign.CENTER),
                     ft.Container(height=20),
                     ft.Row(
@@ -403,13 +403,13 @@ class PomodoroView:
             ft.Column(
                 controls=[
                     ft.Text("설정", size=14, weight=ft.FontWeight.W_400,
-                            color=TEXT_PRI, font_family="Galmuri"),
+                            color=TEXT_PRI, font_family="DOSSaemmul"),
                     ft.Container(height=12),
                     *[
                         ft.Column(
                             controls=[
                                 ft.Text(label, size=12, color=TEXT_SEC,
-                                        font_family="Galmuri"),
+                                        font_family="DOSSaemmul"),
                                 ft.Slider(
                                     min=1, max=60, value=val,
                                     active_color=ACCENT,
@@ -428,7 +428,7 @@ class PomodoroView:
                     ft.Row(
                         controls=[
                             ft.Text("알림음", size=12, color=TEXT_SEC,
-                                    font_family="Galmuri", expand=True),
+                                    font_family="DOSSaemmul", expand=True),
                             ft.Switch(value=True, active_color=ACCENT, scale=0.8,
                                       on_change=toggle_sound),
                         ],
@@ -436,7 +436,7 @@ class PomodoroView:
                     ft.Row(
                         controls=[
                             ft.Text("자동 전환", size=12, color=TEXT_SEC,
-                                    font_family="Galmuri", expand=True),
+                                    font_family="DOSSaemmul", expand=True),
                             ft.Switch(value=False, active_color=ACCENT, scale=0.8,
                                       on_change=toggle_auto),
                         ],
@@ -452,7 +452,7 @@ class PomodoroView:
                 ref=self.history_col_ref,
                 controls=[
                     ft.Text("오늘의 기록", size=14, weight=ft.FontWeight.W_400,
-                            color=TEXT_PRI, font_family="Galmuri"),
+                            color=TEXT_PRI, font_family="DOSSaemmul"),
                     ft.Container(height=10),
                     *self._history_rows(),
                 ],
@@ -475,9 +475,9 @@ class PomodoroView:
                             ft.Column(
                                 controls=[
                                     ft.Text("뽀모도로 타이머", size=26, weight=ft.FontWeight.W_400,
-                                            color=TEXT_PRI, font_family="Galmuri"),
+                                            color=TEXT_PRI, font_family="DOSSaemmul"),
                                     ft.Text("집중과 휴식의 리듬을 만들어보세요",
-                                            size=13, color=TEXT_SEC, font_family="Galmuri"),
+                                            size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
                                 ],
                                 spacing=2,
                                 expand=True,

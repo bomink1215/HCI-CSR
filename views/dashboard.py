@@ -40,10 +40,10 @@ class DashboardView:
                         content=ft.Column(
                             controls=[
                                 ft.Text(str(score), size=26, weight=ft.FontWeight.W_500,
-                                        color=color, font_family="GalmuriBold",
+                                        color=color, font_family="DOSSaemmul",
                                         text_align=ft.TextAlign.CENTER),
                                 ft.Text("자세", size=11, color=TEXT_MUT,
-                                        font_family="Galmuri",
+                                        font_family="DOSSaemmul",
                                         text_align=ft.TextAlign.CENTER),
                             ],
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -84,7 +84,7 @@ class DashboardView:
                             label,
                             size=13,
                             color=TEXT_MUT if done else TEXT_PRI,
-                            font_family="Galmuri",
+                            font_family="DOSSaemmul",
                             expand=True,
                             spans=[
                                 ft.TextSpan(
@@ -120,7 +120,7 @@ class DashboardView:
                         ),
                         ft.Text(d, size=10,
                                 color=ACCENT if is_today else TEXT_MUT,
-                                font_family="Galmuri",
+                                font_family="DOSSaemmul",
                                 text_align=ft.TextAlign.CENTER),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -147,11 +147,11 @@ class DashboardView:
                     ft.Column(
                         controls=[
                             ft.Text(greeting, size=13, color=TEXT_SEC,
-                                    font_family="Galmuri"),
+                                    font_family="DOSSaemmul"),
                             ft.Text("오늘의 현황", size=26, weight=ft.FontWeight.W_400,
-                                    color=TEXT_PRI, font_family="Galmuri"),
+                                    color=TEXT_PRI, font_family="DOSSaemmul"),
                             ft.Text(now.strftime("%Y년 %m월 %d일"),
-                                    size=12, color=TEXT_MUT, font_family="Galmuri"),
+                                    size=12, color=TEXT_MUT, font_family="DOSSaemmul"),
                         ],
                         spacing=3,
                         expand=True,
@@ -162,7 +162,7 @@ class DashboardView:
                             controls=[
                                 mascot_widget(64),
                                 ft.Text("FocusMate", size=9, color=TEXT_MUT,
-                                        font_family="Galmuri",
+                                        font_family="DOSSaemmul",
                                         text_align=ft.TextAlign.CENTER),
                             ],
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -189,13 +189,13 @@ class DashboardView:
                             ft.Column(
                                 controls=[
                                     ft.Text("오늘의 자세 점수", size=12,
-                                            color=TEXT_MUT, font_family="Galmuri"),
+                                            color=TEXT_MUT, font_family="DOSSaemmul"),
                                     ft.Text("양호 👍", size=20, weight=ft.FontWeight.W_400,
-                                            color=ACCENT, font_family="Galmuri"),
+                                            color=ACCENT, font_family="DOSSaemmul"),
                                     ft.Container(height=4),
                                     ft.Text("지난 1시간 평균 78점",
                                             size=11, color=TEXT_SEC,
-                                            font_family="Galmuri"),
+                                            font_family="DOSSaemmul"),
                                 ],
                                 spacing=4,
                                 expand=True,
@@ -215,7 +215,7 @@ class DashboardView:
                                     border_radius=4,
                                 ),
                                 ft.Text("실시간 감지 중", size=11, color=ACCENT,
-                                        font_family="Galmuri"),
+                                        font_family="DOSSaemmul"),
                             ],
                             spacing=6,
                         ),
@@ -257,10 +257,10 @@ class DashboardView:
                     ft.Row(
                         controls=[
                             ft.Text("오늘의 할 일", size=14, weight=ft.FontWeight.W_400,
-                                    color=TEXT_PRI, font_family="Galmuri"),
+                                    color=TEXT_PRI, font_family="DOSSaemmul"),
                             ft.Container(
                                 content=ft.Text("4개", size=11, color=ACCENT,
-                                                font_family="Galmuri"),
+                                                font_family="DOSSaemmul"),
                                 bgcolor=ACCENT_LT,
                                 border_radius=10,
                                 padding=ft.padding.only(left=8, top=3, right=8, bottom=3),
@@ -283,13 +283,13 @@ class DashboardView:
             ft.Column(
                 controls=[
                     ft.Text("뽀모도로", size=14, weight=ft.FontWeight.W_400,
-                            color=TEXT_PRI, font_family="Galmuri"),
+                            color=TEXT_PRI, font_family="DOSSaemmul"),
                     ft.Container(height=10),
                     ft.Text("25:00", size=40, weight=ft.FontWeight.W_400,
-                            color=ACCENT, font_family="Galmuri",
+                            color=ACCENT, font_family="DOSSaemmul",
                             text_align=ft.TextAlign.CENTER),
                     ft.Text("세션 준비됨", size=12, color=TEXT_MUT,
-                            font_family="Galmuri",
+                            font_family="DOSSaemmul",
                             text_align=ft.TextAlign.CENTER),
                     ft.Container(height=12),
                     accent_btn("시작하기", on_click=lambda _: self.navigate("pomodoro"),
@@ -313,10 +313,10 @@ class DashboardView:
                     ft.Row(
                         controls=[
                             ft.Text("이번 주 집중도", size=14, weight=ft.FontWeight.W_400,
-                                    color=TEXT_PRI, font_family="Galmuri"),
+                                    color=TEXT_PRI, font_family="DOSSaemmul"),
                             ft.Container(
                                 content=ft.Text("평균 78점", size=11, color=ACCENT,
-                                                font_family="Galmuri"),
+                                                font_family="DOSSaemmul"),
                                 bgcolor=ACCENT_LT,
                                 border_radius=8,
                                 padding=ft.padding.only(left=8, top=3, right=8, bottom=3),
@@ -339,7 +339,7 @@ class DashboardView:
             ft.Column(
                 controls=[
                     ft.Text("친구 랭킹", size=14, weight=ft.FontWeight.W_400,
-                            color=TEXT_PRI, font_family="Galmuri"),
+                            color=TEXT_PRI, font_family="DOSSaemmul"),
                     ft.Container(height=10),
                     *[
                         ft.Row(
@@ -347,14 +347,14 @@ class DashboardView:
                                 ft.Text(medal, size=16),
                                 ft.Container(
                                     content=ft.Text(name[0], size=11,
-                                                    color="#FFFFFF", font_family="Galmuri"),
+                                                    color="#FFFFFF", font_family="DOSSaemmul"),
                                     width=26, height=26, border_radius=13,
                                     bgcolor=color, alignment=ft.Alignment(0, 0),
                                 ),
                                 ft.Text(name, size=13, color=TEXT_PRI,
-                                        font_family="Galmuri", expand=True),
+                                        font_family="DOSSaemmul", expand=True),
                                 ft.Text(time_, size=12, color=TEXT_SEC,
-                                        font_family="Galmuri"),
+                                        font_family="DOSSaemmul"),
                             ],
                             spacing=8,
                         )
