@@ -33,7 +33,7 @@ W_MEDIUM  = ft.FontWeight.W_500   # 소제목
 W_BOLD    = ft.FontWeight.W_700   # 제목·버튼
 
 
-def card(content: ft.Control, padding=20, expand=False, **kwargs) -> ft.Container:
+def card(content: ft.Control, padding=16, expand=False, **kwargs) -> ft.Container:
     return ft.Container(
         content=content,
         bgcolor=BG_CARD,

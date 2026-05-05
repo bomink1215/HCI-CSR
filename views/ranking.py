@@ -19,12 +19,12 @@ BORDER    = "#E2E6EC"
 DATA_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "friends.json")
 
 DEFAULT_FRIENDS = [
-    {"name": "김철수",    "sessions": 18, "focus_min": 272, "streak": 12, "score": 97,  "avatar": "#00C9A7", "me": False},
-    {"name": "이영희",    "sessions": 16, "focus_min": 235, "streak": 9,  "score": 89,  "avatar": "#9B8FFF", "me": False},
-    {"name": "나 (박지수)", "sessions": 14, "focus_min": 200, "streak": 5, "score": 82, "avatar": "#FF5C5C", "me": True},
-    {"name": "최민준",    "sessions": 12, "focus_min": 170, "streak": 3,  "score": 75,  "avatar": "#FFB347", "me": False},
-    {"name": "한소희",    "sessions": 10, "focus_min": 130, "streak": 7,  "score": 68,  "avatar": "#34D399", "me": False},
-    {"name": "정우성",    "sessions": 8,  "focus_min": 105, "streak": 2,  "score": 55,  "avatar": "#60A5FA", "me": False},
+    {"name": "김철수",    "sessions": 18, "focus_min": 272, "streak": 12, "score": 97,  "posture_avg": 91, "avatar": "#00C9A7", "me": False},
+    {"name": "이영희",    "sessions": 16, "focus_min": 235, "streak": 9,  "score": 89,  "posture_avg": 85, "avatar": "#9B8FFF", "me": False},
+    {"name": "나 (박지수)", "sessions": 14, "focus_min": 200, "streak": 5, "score": 82, "posture_avg": 78, "avatar": "#FF5C5C", "me": True},
+    {"name": "최민준",    "sessions": 12, "focus_min": 170, "streak": 3,  "score": 75,  "posture_avg": 72, "avatar": "#FFB347", "me": False},
+    {"name": "한소희",    "sessions": 10, "focus_min": 130, "streak": 7,  "score": 68,  "posture_avg": 88, "avatar": "#34D399", "me": False},
+    {"name": "정우성",    "sessions": 8,  "focus_min": 105, "streak": 2,  "score": 55,  "posture_avg": 60, "avatar": "#60A5FA", "me": False},
 ]
 
 MEDALS = ["🥇", "🥈", "🥉"]
@@ -147,7 +147,10 @@ class RankingView:
     def _rank_row(self, rank: int, friend: dict) -> ft.Container:
         is_me = friend["me"]
         medal = MEDALS[rank - 1] if rank <= 3 else f"#{rank}"
-        bar_pct = friend["score"] / 100
+        focus_pct   = min(friend["focus_min"] / 300, 1.0)
+        posture_avg = friend.get("posture_avg", 0)
+        posture_pct = posture_avg / 100
+        posture_color = (ACCENT if posture_avg >= 70 else (WARNING if posture_avg >= 50 else DANGER))
 
         return ft.Container(
             content=ft.Column(
@@ -177,7 +180,7 @@ class RankingView:
                                             ft.Text(friend["name"], size=13,
                                                     color=ACCENT if is_me else TEXT_PRI,
                                                     font_family="DOSSaemmul",
-                                                    weight=ft.FontWeight.W_400 if is_me else ft.FontWeight.W_400),
+                                                    weight=ft.FontWeight.W_400),
                                             *(
                                                 [ft.Container(
                                                     content=ft.Text("나", size=9, color="#FFFFFF",
@@ -203,29 +206,81 @@ class RankingView:
                                 spacing=2,
                                 expand=True,
                             ),
-                            ft.Column(
+                            # 집중시간 + 자세점수 나란히
+                            ft.Row(
                                 controls=[
-                                    ft.Text(_fmt_min(friend["focus_min"]), size=14,
-                                            color=ACCENT if is_me else TEXT_PRI,
-                                            font_family="DOSSaemmul",
-                                            weight=ft.FontWeight.W_400),
-                                    ft.Text("집중시간", size=10, color=TEXT_MUT,
-                                            font_family="DOSSaemmul"),
+                                    ft.Column(
+                                        controls=[
+                                            ft.Text(_fmt_min(friend["focus_min"]), size=12,
+                                                    color=ACCENT if is_me else TEXT_PRI,
+                                                    font_family="DOSSaemmul",
+                                                    weight=ft.FontWeight.W_400),
+                                            ft.Text("집중", size=10, color=TEXT_MUT,
+                                                    font_family="DOSSaemmul"),
+                                        ],
+                                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                        spacing=1,
+                                    ),
+                                    ft.Container(width=1, height=28, bgcolor=BORDER),
+                                    ft.Column(
+                                        controls=[
+                                            ft.Text(f"{posture_avg}점", size=12,
+                                                    color=posture_color,
+                                                    font_family="DOSSaemmul",
+                                                    weight=ft.FontWeight.W_400),
+                                            ft.Text("자세", size=10, color=TEXT_MUT,
+                                                    font_family="DOSSaemmul"),
+                                        ],
+                                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                        spacing=1,
+                                    ),
                                 ],
-                                horizontal_alignment=ft.CrossAxisAlignment.END,
-                                spacing=2,
+                                spacing=10,
+                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
                             ),
                         ],
                         spacing=10,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
-                    ft.Container(
-                        content=ft.ProgressBar(
-                            value=bar_pct,
-                            color=ACCENT if is_me else BG_CARD2,
-                            bgcolor=BORDER, height=4, border_radius=2,
-                        ),
-                        padding=ft.padding.only(left=34, top=0),
+                    # 집중 + 자세 이중 바
+                    ft.Column(
+                        controls=[
+                            ft.Row(
+                                controls=[
+                                    ft.Container(width=34),
+                                    ft.Text("집중", size=9, color=TEXT_MUT,
+                                            font_family="DOSSaemmul", width=22),
+                                    ft.Container(
+                                        content=ft.ProgressBar(
+                                            value=focus_pct,
+                                            color=ACCENT if is_me else BG_CARD2,
+                                            bgcolor=BORDER, height=4, border_radius=2,
+                                        ),
+                                        expand=True,
+                                    ),
+                                ],
+                                spacing=6,
+                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                            ),
+                            ft.Row(
+                                controls=[
+                                    ft.Container(width=34),
+                                    ft.Text("자세", size=9, color=TEXT_MUT,
+                                            font_family="DOSSaemmul", width=22),
+                                    ft.Container(
+                                        content=ft.ProgressBar(
+                                            value=posture_pct,
+                                            color=posture_color,
+                                            bgcolor=BORDER, height=4, border_radius=2,
+                                        ),
+                                        expand=True,
+                                    ),
+                                ],
+                                spacing=6,
+                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                            ),
+                        ],
+                        spacing=4,
                     ),
                 ],
                 spacing=8,
