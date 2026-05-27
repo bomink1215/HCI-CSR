@@ -16,14 +16,63 @@ BORDER    = "#E2E6EC"
 FONT      = "DOSSaemmul"
 
 # 행 높이 상수
-ROW1_H = 220
+ROW1_H = 250
 ROW2_H = 340
+
+
+POMO_LABELS = {"focus": "집중 세션", "rest": "휴식 세션"}
+POMO_COLORS = {"focus": ACCENT,    "rest": PURPLE}
 
 
 class DashboardView:
     def __init__(self, page: ft.Page, navigate):
         self.page = page
         self.navigate = navigate
+        self.pomo_time_ref      = ft.Ref()
+        self.pomo_status_ref    = ft.Ref()
+        self.pomo_ring_ref      = ft.Ref()
+        self.pomo_play_icon_ref = ft.Ref()
+        self.pomo_play_btn_ref  = ft.Ref()
+        # main.py 에서 PomodoroView 메서드를 연결
+        self.pomo_start_stop_cb = None
+        self.pomo_reset_cb      = None
+        self.pomo_skip_cb       = None
+
+    def update_pomodoro(self, remaining: int, total: int, mode: str, running: bool):
+        """PomodoroView 에서 매초 호출 — 대시보드 카드 실시간 갱신"""
+        mins, secs = remaining // 60, remaining % 60
+        time_str = f"{mins:02d}:{secs:02d}"
+        color = POMO_COLORS.get(mode, ACCENT)
+        if running:
+            status = POMO_LABELS.get(mode, "")
+        elif remaining == 0:
+            status = "세션 완료"
+        elif remaining < total:
+            status = "일시정지"
+        else:
+            status = "세션 준비됨"
+        try:
+            if self.pomo_time_ref.current:
+                self.pomo_time_ref.current.value = time_str
+                self.pomo_time_ref.current.color = color
+                self.pomo_time_ref.current.update()
+            if self.pomo_status_ref.current:
+                self.pomo_status_ref.current.value = status
+                self.pomo_status_ref.current.update()
+            if self.pomo_ring_ref.current:
+                self.pomo_ring_ref.current.value = remaining / total if total else 0
+                self.pomo_ring_ref.current.color = color
+                self.pomo_ring_ref.current.update()
+            if self.pomo_play_icon_ref.current:
+                self.pomo_play_icon_ref.current.icon = (
+                    ft.Icons.PAUSE if running else ft.Icons.PLAY_ARROW
+                )
+                self.pomo_play_icon_ref.current.update()
+            if self.pomo_play_btn_ref.current:
+                self.pomo_play_btn_ref.current.bgcolor = color
+                self.pomo_play_btn_ref.current.update()
+        except Exception:
+            pass
 
     def _posture_ring(self, score=78) -> ft.Container:
         color = ACCENT if score >= 70 else (WARNING if score >= 50 else DANGER)
@@ -213,26 +262,109 @@ class DashboardView:
             height=ROW1_H, expand=2,
         )
 
+        RING_SZ = 110
+        BTN_SZ  = 34
+
+        def _icon_btn(icon, ref=None, on_click=None, size=BTN_SZ):
+            return ft.Container(
+                content=ft.Icon(icon, size=16, color=TEXT_MUT,
+                                ref=ref if icon is None else None),
+                width=size, height=size, border_radius=size // 2,
+                border=ft.border.all(1.5, BORDER),
+                alignment=ft.Alignment(0, 0),
+                on_click=on_click,
+            )
+
+        play_btn = ft.Container(
+            ref=self.pomo_play_btn_ref,
+            content=ft.Icon(
+                ref=self.pomo_play_icon_ref,
+                icon=ft.Icons.PLAY_ARROW,
+                size=20, color="#FFFFFF",
+            ),
+            width=BTN_SZ + 10, height=BTN_SZ + 10,
+            border_radius=(BTN_SZ + 10) // 2,
+            bgcolor=ACCENT,
+            alignment=ft.Alignment(0, 0),
+            on_click=lambda e: self.pomo_start_stop_cb(e) if self.pomo_start_stop_cb else None,
+            shadow=ft.BoxShadow(blur_radius=10, color=ACCENT + "55", offset=ft.Offset(0, 3)),
+        )
+
         pomodoro_card = ft.Container(
             content=card(
                 ft.Column(
                     controls=[
-                        ft.Text("뽀모도로", size=13, color=TEXT_PRI, font_family=FONT),
-                        ft.Container(expand=1),
-                        ft.Text("25:00", size=34, color=ACCENT, font_family=FONT,
-                                text_align=ft.TextAlign.CENTER),
-                        ft.Text("세션 준비됨", size=11, color=TEXT_MUT,
-                                font_family=FONT, text_align=ft.TextAlign.CENTER),
-                        ft.Container(expand=1),
-                        accent_btn("시작하기",
-                                   on_click=lambda _: self.navigate("pomodoro"),
-                                   icon=ft.Icons.PLAY_ARROW),
+                        # 제목 — 왼쪽 정렬
+                        ft.Row(
+                            controls=[
+                                ft.Text("뽀모도로", size=13, color=TEXT_PRI, font_family=FONT),
+                            ],
+                            alignment=ft.MainAxisAlignment.START,
+                        ),
+                        ft.Container(height=2),
+                        # 링 타이머
+                        ft.Container(
+                            content=ft.Stack(
+                                controls=[
+                                    ft.ProgressRing(
+                                        ref=self.pomo_ring_ref,
+                                        value=1.0, width=RING_SZ, height=RING_SZ,
+                                        stroke_width=8, color=ACCENT, bgcolor=BORDER,
+                                    ),
+                                    ft.Container(
+                                        width=RING_SZ, height=RING_SZ,
+                                        alignment=ft.Alignment(0, 0),
+                                        content=ft.Text(
+                                            ref=self.pomo_time_ref,
+                                            value="25:00", size=22,
+                                            color=ACCENT, font_family=FONT,
+                                            text_align=ft.TextAlign.CENTER,
+                                        ),
+                                    ),
+                                ],
+                                width=RING_SZ, height=RING_SZ,
+                            ),
+                            alignment=ft.Alignment(0, 0),
+                        ),
+                        ft.Container(expand=True),
+                        ft.Text(
+                            ref=self.pomo_status_ref,
+                            value="세션 준비됨", size=11, color=TEXT_MUT,
+                            font_family=FONT, text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.Container(expand=True),
+                        # 컨트롤 버튼 3개
+                        ft.Row(
+                            controls=[
+                                ft.Container(
+                                    content=ft.Icon(ft.Icons.REPLAY, size=16, color=TEXT_MUT),
+                                    width=BTN_SZ, height=BTN_SZ,
+                                    border_radius=BTN_SZ // 2,
+                                    border=ft.border.all(1.5, BORDER),
+                                    alignment=ft.Alignment(0, 0),
+                                    on_click=lambda e: self.pomo_reset_cb(e) if self.pomo_reset_cb else None,
+                                ),
+                                play_btn,
+                                ft.Container(
+                                    content=ft.Icon(ft.Icons.SKIP_NEXT, size=16, color=TEXT_MUT),
+                                    width=BTN_SZ, height=BTN_SZ,
+                                    border_radius=BTN_SZ // 2,
+                                    border=ft.border.all(1.5, BORDER),
+                                    alignment=ft.Alignment(0, 0),
+                                    on_click=lambda e: self.pomo_skip_cb(e) if self.pomo_skip_cb else None,
+                                ),
+                            ],
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                            spacing=10,
+                        ),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=2,
+                    spacing=0,
                 ),
                 padding=14,
             ),
+            on_click=lambda _: self.navigate("pomodoro"),
             height=ROW1_H, expand=1,
         )
 

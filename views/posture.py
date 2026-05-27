@@ -322,13 +322,6 @@ class PostureView:
         )
 
     def build(self) -> ft.Container:
-        tips = [
-            ("모니터 높이", "눈높이와 모니터 상단이 일치하도록"),
-            ("목 각도",    "앞으로 15° 이상 기울지 않도록"),
-            ("허리",       "등받이에 완전히 밀착시키기"),
-            ("발 위치",    "바닥에 평평하게 놓기"),
-        ]
-
         model_path = _find_model()
 
         preview_box = ft.Container(
@@ -417,32 +410,6 @@ class PostureView:
                     ),
                 ),
                 ft.Container(height=12),
-                card(
-                    ft.Column(
-                        controls=[
-                            ft.Text("자세 체크리스트", size=13, weight=ft.FontWeight.W_400,
-                                    color=TEXT_PRI, font_family="DOSSaemmul"),
-                            ft.Container(height=6),
-                            *[
-                                ft.Row(controls=[
-                                    ft.Container(
-                                        content=ft.Icon(ft.Icons.CHECK, size=16, color=ACCENT),
-                                        width=24,
-                                    ),
-                                    ft.Column(controls=[
-                                        ft.Text(t, size=12, color=TEXT_PRI,
-                                                font_family="DOSSaemmul"),
-                                        ft.Text(d, size=10, color=TEXT_MUT,
-                                                font_family="DOSSaemmul"),
-                                    ], spacing=1),
-                                ], spacing=8)
-                                for t, d in tips
-                            ],
-                        ],
-                        spacing=10,
-                    ),
-                ),
-                ft.Container(height=12),
                 ft.Container(
                     content=ft.Row(
                         controls=[
@@ -464,26 +431,6 @@ class PostureView:
             width=240, spacing=0,
         )
 
-        tip_cards = ft.Column(
-            controls=[
-                card(ft.Row(controls=[
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.ACCESSIBILITY, size=20, color=ACCENT),
-                        width=38, height=38, bgcolor=ACCENT_LT,
-                        border_radius=10, alignment=ft.Alignment(0, 0),
-                    ),
-                    ft.Column(controls=[
-                        ft.Text(t, size=13, weight=ft.FontWeight.W_400,
-                                color=TEXT_PRI, font_family="DOSSaemmul"),
-                        ft.Text(d, size=11, color=TEXT_SEC,
-                                font_family="DOSSaemmul"),
-                    ], spacing=2, expand=True),
-                ], spacing=12))
-                for t, d in tips
-            ],
-            spacing=8,
-        )
-
         main_area = ft.Column(
             controls=[
                 ft.Column(controls=[
@@ -496,11 +443,6 @@ class PostureView:
                 model_warning,
                 ft.Container(height=4),
                 preview_box,
-                ft.Container(height=16),
-                ft.Text("교정 팁", size=14, weight=ft.FontWeight.W_400,
-                        color=TEXT_PRI, font_family="DOSSaemmul"),
-                ft.Container(height=8),
-                tip_cards,
             ],
             expand=True, spacing=0,
             scroll=ft.ScrollMode.AUTO,

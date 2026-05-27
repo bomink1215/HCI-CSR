@@ -229,11 +229,8 @@ class PomodoroView:
         self.cycle_count   = 4   # 목표 사이클 수
         self.auto_start = False
         self.sound_on   = True
-        self.history = [
-            ("집중", "09:00", "09:25", "완료"),
-            ("휴식", "09:25", "09:30", "완료"),
-            ("집중", "09:30", "09:55", "완료"),
-        ]
+        self.history = []
+        self.session_start_str = ""  # 세션 시작 시각 기록용
 
         self.time_ref        = ft.Ref()
         self.ring_ref        = ft.Ref()
@@ -243,6 +240,8 @@ class PomodoroView:
         self.history_col_ref = ft.Ref()
         self.tab_refs        = {"focus": ft.Ref(), "rest": ft.Ref()}
         self.tab_text_refs   = {"focus": ft.Ref(), "rest": ft.Ref()}
+        self.on_tick = None   # DashboardView.update_pomodoro 콜백 연결용
+
         self.test_mode        = False
         self.focus_label_ref  = ft.Ref()
         self.rest_label_ref   = ft.Ref()
@@ -290,13 +289,24 @@ class PomodoroView:
                 self.tab_text_refs[m].current.update()
 
     # ── playback control ─────────────────────────────────────────────────
+    def _fire_tick(self):
+        if self.on_tick:
+            try:
+                self.on_tick(self.remaining, self.total, self.mode, self.running)
+            except Exception:
+                pass
+
     def _start_stop(self, e):
         if not self.running:
             self.running = True
             self.paused  = False
+            # 처음 시작할 때만 시작 시각 기록 (일시정지 후 재개는 덮어쓰지 않음)
+            if not self.paused or not self.session_start_str:
+                self.session_start_str = time.strftime("%H:%M")
             if self.play_icon_ref.current:
                 self.play_icon_ref.current.icon = ft.Icons.PAUSE
                 self.play_icon_ref.current.update()
+            self._fire_tick()
             self.page.run_task(self._tick_async)
         else:
             self.running = False
@@ -304,6 +314,7 @@ class PomodoroView:
             if self.play_icon_ref.current:
                 self.play_icon_ref.current.icon = ft.Icons.PLAY_ARROW
                 self.play_icon_ref.current.update()
+            self._fire_tick()
 
     def _skip_next(self, e):
         """현재 세션을 건너뛰고 다음 세션으로 이동"""
@@ -353,7 +364,9 @@ class PomodoroView:
     # ── session completion ───────────────────────────────────────────────
     def _on_complete(self):
         now_str = time.strftime("%H:%M")
-        self.history.append((MODE_LABELS[self.mode], "—", now_str, "완료"))
+        start_str = self.session_start_str or "—"
+        self.history.append((MODE_LABELS[self.mode], start_str, now_str, "완료"))
+        self._update_history()
 
         # 집중 세션 완료 시에만 카운트
         if self.mode == "focus":
@@ -390,6 +403,7 @@ class PomodoroView:
         if self.mode == "focus":
             # 집중 → 휴식: 항상 자동 전환
             self._set_mode(next_mode)
+            self.session_start_str = time.strftime("%H:%M")
             self.running = True
             self.paused  = False
             if self.play_icon_ref.current:
@@ -399,6 +413,7 @@ class PomodoroView:
         elif self.auto_start:
             # 휴식 → 집중: 자동 전환 켜져 있을 때만
             self._set_mode(next_mode)
+            self.session_start_str = time.strftime("%H:%M")
             self.running = True
             self.paused  = False
             if self.play_icon_ref.current:
@@ -498,6 +513,11 @@ class PomodoroView:
                 self.mode_label_ref.current.update()
         except Exception:
             pass
+        if self.on_tick:
+            try:
+                self.on_tick(self.remaining, self.total, self.mode, self.running)
+            except Exception:
+                pass
 
     # ── dots & history ───────────────────────────────────────────────────
     def _dot_controls(self) -> list:
@@ -520,6 +540,19 @@ class PomodoroView:
         if self.cycle_text_ref.current:
             self.cycle_text_ref.current.value = f"집중 진행 ({self.sessions_done}/{self.cycle_count}회)"
             self.cycle_text_ref.current.update()
+
+    def _update_history(self):
+        if self.history_col_ref.current:
+            self.history_col_ref.current.controls = [
+                ft.Text("오늘의 기록", size=14, weight=ft.FontWeight.W_400,
+                        color=TEXT_PRI, font_family="DOSSaemmul"),
+                ft.Container(height=10),
+                *self._history_rows(),
+            ]
+            try:
+                self.history_col_ref.current.update()
+            except Exception:
+                pass
 
     def _history_rows(self) -> list:
         rows = []

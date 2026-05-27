@@ -44,6 +44,10 @@ def main(page: ft.Page):
     dashboard_view = DashboardView(page, navigate)
     posture_view   = PostureView(page)
     pomodoro_view  = PomodoroView(page)
+    pomodoro_view.on_tick           = dashboard_view.update_pomodoro
+    dashboard_view.pomo_start_stop_cb = pomodoro_view._start_stop
+    dashboard_view.pomo_reset_cb      = pomodoro_view._reset
+    dashboard_view.pomo_skip_cb       = pomodoro_view._skip_next
     todo_view      = TodoView(page)
     ranking_view   = RankingView(page)
 
