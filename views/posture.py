@@ -334,7 +334,7 @@ class PostureView:
         preview_box = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text("\ue3a5", font_family="Material Icons", size=52, color=BORDER),
+                    ft.Icon(ft.Icons.ACCESSIBILITY, size=52, color=BORDER),
                     ft.Text("모니터링 시작 버튼을 누르면\nOpenCV 창이 열립니다",
                             size=14, color=TEXT_MUT, font_family="DOSSaemmul",
                             text_align=ft.TextAlign.CENTER),
@@ -376,7 +376,7 @@ class PostureView:
         model_warning = ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Text("\ue002", font_family="Material Icons", size=16, color=WARNING),
+                    ft.Icon(ft.Icons.WARNING, size=16, color=WARNING),
                     ft.Text(
                         "pose_landmarker.task 파일 없음!\n"
                         "터미널: curl -o pose_landmarker.task \"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task\"",
@@ -426,9 +426,7 @@ class PostureView:
                             *[
                                 ft.Row(controls=[
                                     ft.Container(
-                                        content=ft.Text("\ue5ca",
-                                                        font_family="Material Icons",
-                                                        size=16, color=ACCENT),
+                                        content=ft.Icon(ft.Icons.CHECK, size=16, color=ACCENT),
                                         width=24,
                                     ),
                                     ft.Column(controls=[
@@ -448,8 +446,7 @@ class PostureView:
                 ft.Container(
                     content=ft.Row(
                         controls=[
-                            ft.Text("\ue037", font_family="Material Icons",
-                                    size=18, color="#FFFFFF"),
+                            ft.Icon(ft.Icons.PLAY_ARROW, size=18, color="#FFFFFF"),
                             ft.Text("모니터링 시작", size=14, weight=ft.FontWeight.W_400,
                                     color="#FFFFFF", font_family="DOSSaemmul"),
                         ],
@@ -471,8 +468,7 @@ class PostureView:
             controls=[
                 card(ft.Row(controls=[
                     ft.Container(
-                        content=ft.Text("\ue3a5", font_family="Material Icons",
-                                       size=20, color=ACCENT),
+                        content=ft.Icon(ft.Icons.ACCESSIBILITY, size=20, color=ACCENT),
                         width=38, height=38, bgcolor=ACCENT_LT,
                         border_radius=10, alignment=ft.Alignment(0, 0),
                     ),

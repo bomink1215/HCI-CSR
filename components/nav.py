@@ -15,11 +15,11 @@ class NavBar:
         self.active = "dashboard"
         self.buttons: dict[str, ft.Container] = {}
         self.items = [
-            ("dashboard", "\ue871",  "대시보드"),
-            ("posture",   "\ue3a5",  "자세"),
-            ("pomodoro",  "\ue425",  "타이머"),
-            ("todo",      "\ue8ef",  "할 일"),
-            ("ranking",   "\ue8b6",  "랭킹"),
+            ("dashboard", ft.Icons.DASHBOARD,      "대시보드"),
+            ("posture",   ft.Icons.ACCESSIBILITY,  "자세"),
+            ("pomodoro",  ft.Icons.TIMER,          "타이머"),
+            ("todo",      ft.Icons.CHECKLIST,      "할 일"),
+            ("ranking",   ft.Icons.LEADERBOARD,    "랭킹"),
         ]
 
     def _nav_btn(self, key: str, icon: str, label: str) -> ft.Container:
@@ -41,9 +41,8 @@ class NavBar:
             border_radius=ft.BorderRadius(0, 4, 4, 0),
         )
 
-        icon_text = ft.Text(
+        icon_widget = ft.Icon(
             icon,
-            font_family="Material Icons",
             size=22,
             color=ACCENT if is_active else TEXT_MUT,
         )
@@ -61,7 +60,7 @@ class NavBar:
                     indicator,
                     ft.Container(
                         content=ft.Column(
-                            controls=[icon_text, label_text],
+                            controls=[icon_widget, label_text],
                             spacing=2,
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
@@ -87,11 +86,11 @@ class NavBar:
             row: ft.Row = btn.content
             indicator: ft.Container = row.controls[0]
             col: ft.Column = row.controls[1].content
-            icon_t: ft.Text = col.controls[0]
+            icon_w: ft.Icon = col.controls[0]
             label_t: ft.Text = col.controls[1]
 
             indicator.bgcolor = ACCENT if is_active else "transparent"
-            icon_t.color = ACCENT if is_active else TEXT_MUT
+            icon_w.color = ACCENT if is_active else TEXT_MUT
             label_t.color = ACCENT if is_active else TEXT_MUT
             btn.bgcolor = ACCENT_LT if is_active else "transparent"
             btn.update()
@@ -130,7 +129,7 @@ class NavBar:
         settings_btn = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text("\ue8b8", font_family="Material Icons", size=20, color=TEXT_MUT),
+                    ft.Icon(ft.Icons.SETTINGS, size=20, color=TEXT_MUT),
                     ft.Text("설정", size=10, color=TEXT_MUT, font_family="DOSSaemmul"),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,

@@ -1,7 +1,40 @@
 import flet as ft
+import asyncio
+import subprocess
+import sys
 import threading
 import time
-from components.ui import card, accent_btn, ghost_btn, mascot_widget
+from components.ui import card, mascot_widget
+
+
+def _notify(title: str, message: str):
+    """OS 레벨 팝업 알림 (백그라운드에서도 표시)"""
+    try:
+        if sys.platform == "darwin":
+            script = (
+                f'display notification "{message}" '
+                f'with title "{title}" '
+                f'sound name "Glass"'
+            )
+            subprocess.Popen(["osascript", "-e", script])
+        elif sys.platform == "win32":
+            ps = (
+                "Add-Type -AssemblyName System.Windows.Forms;"
+                "$n=[System.Windows.Forms.NotifyIcon]::new();"
+                "$n.Icon=[System.Drawing.SystemIcons]::Information;"
+                "$n.Visible=$true;"
+                f"$n.ShowBalloonTip(6000,'{title}','{message}',"
+                "[System.Windows.Forms.ToolTipIcon]::Info);"
+                "Start-Sleep 7;$n.Dispose()"
+            )
+            subprocess.Popen(
+                ["powershell", "-WindowStyle", "Hidden", "-Command", ps],
+                creationflags=0x08000000,
+            )
+        else:
+            subprocess.Popen(["notify-send", "-t", "6000", title, message])
+    except Exception:
+        pass
 
 BG_BASE   = "#FFFFFF"
 BG_CARD   = "#F4F6F8"
@@ -17,18 +50,11 @@ TEXT_SEC  = "#5A6375"
 TEXT_MUT  = "#9DA8B7"
 BORDER    = "#E2E6EC"
 
-MODES = {
-    "focus":  {"label": "집중",     "minutes": 25, "color": ACCENT},
-    "short":  {"label": "짧은 휴식", "minutes": 5,  "color": PURPLE},
-    "long":   {"label": "긴 휴식",   "minutes": 15, "color": WARNING},
-}
-
-# 자동 전환 순서: 집중 → 짧은휴식 → 집중 → 짧은휴식 → ... → 4번마다 긴 휴식
-SESSION_SEQUENCE = ["focus", "short", "focus", "short", "focus", "short", "focus", "long"]
+MODE_COLORS  = {"focus": ACCENT,  "rest": PURPLE}
+MODE_LABELS  = {"focus": "집중",   "rest": "휴식"}
 
 
 def _beep(freq: int = 880, duration: float = 0.3, times: int = 2):
-    """간단한 비프음 (크로스플랫폼)"""
     try:
         import math, wave, tempfile, os
         sample_rate = 44100
@@ -44,7 +70,6 @@ def _beep(freq: int = 880, duration: float = 0.3, times: int = 2):
                     val = int(32767 * 0.5 * math.sin(2 * math.pi * freq * i / sample_rate))
                     data += val.to_bytes(2, 'little', signed=True)
                 wf.writeframes(data)
-        # 플랫폼별 재생
         import sys, subprocess
         if sys.platform == "win32":
             import winsound
@@ -70,98 +95,228 @@ class PomodoroView:
     def __init__(self, page: ft.Page):
         self.page = page
         self.mode = "focus"
+        self.focus_minutes = 25
+        self.rest_minutes  = 5
         self.running = False
-        self.paused = False
+        self.paused  = False
         self.remaining = 25 * 60
-        self.total = 25 * 60
-        self._thread = None
-        self.sessions_done = 0
-        self.seq_idx = 0          # SESSION_SEQUENCE 인덱스
+        self.total     = 25 * 60
+        self._thread   = None
+        self.sessions_done = 0   # 완료된 집중 세션 수
+        self.cycle_count   = 4   # 목표 사이클 수
         self.auto_start = False
-        self.sound_on = True
+        self.sound_on   = True
         self.history = [
             ("집중", "09:00", "09:25", "완료"),
-            ("짧은 휴식", "09:25", "09:30", "완료"),
+            ("휴식", "09:25", "09:30", "완료"),
             ("집중", "09:30", "09:55", "완료"),
         ]
 
-        self.time_ref      = ft.Ref()
-        self.ring_ref      = ft.Ref()
-        self.mode_label_ref = ft.Ref()
-        self.btn_row_ref   = ft.Ref()
+        self.time_ref        = ft.Ref()
+        self.ring_ref        = ft.Ref()
+        self.mode_label_ref  = ft.Ref()
+        self.play_icon_ref   = ft.Ref()
+        self.play_btn_ref    = ft.Ref()
+        self.history_col_ref = ft.Ref()
+        self.tab_refs        = {"focus": ft.Ref(), "rest": ft.Ref()}
+        self.tab_text_refs   = {"focus": ft.Ref(), "rest": ft.Ref()}
+        self.test_mode        = False
+        self.focus_label_ref  = ft.Ref()
+        self.rest_label_ref   = ft.Ref()
+        self.cycle_label_ref  = ft.Ref()
+        self.cycle_text_ref   = ft.Ref()
         self.session_dots_ref = ft.Ref()
-        self.history_col_ref  = ft.Ref()
-        self.play_icon_ref = ft.Ref()
+        self.test_btn_ref     = ft.Ref()
 
+    # ── helpers ──────────────────────────────────────────────────────────
     def _fmt(self, secs: int) -> str:
         return f"{secs // 60:02d}:{secs % 60:02d}"
 
+    # ── mode switching ───────────────────────────────────────────────────
     def _set_mode(self, mode: str, e=None):
         self.mode = mode
-        cfg = MODES[mode]
-        self.remaining = cfg["minutes"] * 60
-        self.total = self.remaining
+        if self.test_mode:
+            secs = 10
+        else:
+            mins = self.focus_minutes if mode == "focus" else self.rest_minutes
+            secs = mins * 60
+        self.remaining = secs
+        self.total = secs
         self.running = False
-        self.paused = False
+        self.paused  = False
+        # reset play icon
+        if self.play_icon_ref.current:
+            self.play_icon_ref.current.icon = ft.Icons.PLAY_ARROW
+            self.play_icon_ref.current.update()
+        # update play button color
+        if self.play_btn_ref.current:
+            self.play_btn_ref.current.bgcolor = MODE_COLORS[mode]
+            self.play_btn_ref.current.update()
+        self._update_tabs()
         self._update_display()
 
+    def _update_tabs(self):
+        for m in ("focus", "rest"):
+            is_active = m == self.mode
+            if self.tab_refs[m].current:
+                self.tab_refs[m].current.bgcolor = ACCENT_LT if is_active else "transparent"
+                self.tab_refs[m].current.border  = ft.border.all(1, ACCENT if is_active else "transparent")
+                self.tab_refs[m].current.update()
+            if self.tab_text_refs[m].current:
+                self.tab_text_refs[m].current.color = MODE_COLORS[m] if is_active else TEXT_MUT
+                self.tab_text_refs[m].current.update()
+
+    # ── playback control ─────────────────────────────────────────────────
     def _start_stop(self, e):
         if not self.running:
             self.running = True
-            self.paused = False
+            self.paused  = False
             if self.play_icon_ref.current:
-                self.play_icon_ref.current.value = "\ue047"  # pause icon
+                self.play_icon_ref.current.icon = ft.Icons.PAUSE
                 self.play_icon_ref.current.update()
-            self._thread = threading.Thread(target=self._tick, daemon=True)
-            self._thread.start()
+            self.page.run_task(self._tick_async)
         else:
             self.running = False
-            self.paused = True
+            self.paused  = True
             if self.play_icon_ref.current:
-                self.play_icon_ref.current.value = "\ue037"  # play icon
+                self.play_icon_ref.current.icon = ft.Icons.PLAY_ARROW
                 self.play_icon_ref.current.update()
 
-    def _reset(self, e):
+    def _skip_next(self, e):
+        """현재 세션을 건너뛰고 다음 세션으로 이동"""
         self.running = False
-        self.paused = False
-        self.remaining = self.total
+        self.paused  = False
+        next_mode = "rest" if self.mode == "focus" else "focus"
+        self._set_mode(next_mode)
+
+    def _reset(self, e):
+        self.running  = False
+        self.paused   = False
+        if self.test_mode:
+            secs = 10
+        else:
+            mins = self.focus_minutes if self.mode == "focus" else self.rest_minutes
+            secs = mins * 60
+        self.remaining = secs
+        self.total     = secs
         if self.play_icon_ref.current:
-            self.play_icon_ref.current.value = "\ue037"
+            self.play_icon_ref.current.icon = ft.Icons.PLAY_ARROW
             self.play_icon_ref.current.update()
         self._update_display()
 
-    def _tick(self):
+    # ── tick (async, wall-clock based → no drift, real-time UI update) ──
+    async def _tick_async(self):
+        start_wall      = time.time()
+        start_remaining = self.remaining
+        last_shown      = self.remaining
+
         while self.running and self.remaining > 0:
-            time.sleep(1)
-            if self.running:
-                self.remaining -= 1
+            await asyncio.sleep(0.25)
+            if not self.running:
+                break
+            elapsed       = time.time() - start_wall
+            new_remaining = max(0, start_remaining - int(elapsed))
+            if new_remaining != last_shown:
+                self.remaining = new_remaining
+                last_shown     = new_remaining
                 self._update_display()
+
         if self.remaining <= 0 and self.running:
             self.running = False
-            self.sessions_done += 1
             if self.sound_on:
                 threading.Thread(target=_beep, args=(880, 0.25, 3), daemon=True).start()
             self._on_complete()
 
+    # ── session completion ───────────────────────────────────────────────
     def _on_complete(self):
-        # 다음 세션 결정
-        self.seq_idx = (self.seq_idx + 1) % len(SESSION_SEQUENCE)
-        next_mode = SESSION_SEQUENCE[self.seq_idx]
-        next_label = MODES[next_mode]["label"]
-
-        # 기록 추가
         now_str = time.strftime("%H:%M")
-        cfg = MODES[self.mode]
-        self.history.append((cfg["label"], "—", now_str, "완료"))
+        self.history.append((MODE_LABELS[self.mode], "—", now_str, "완료"))
 
-        if self.auto_start:
+        # 집중 세션 완료 시에만 카운트
+        if self.mode == "focus":
+            self.sessions_done += 1
+            self._update_dots()
+
+        # 목표 사이클 달성 확인
+        if self.mode == "focus" and self.sessions_done >= self.cycle_count:
+            threading.Thread(
+                target=_notify,
+                args=("FocusMate ✅", f"{self.cycle_count}회 사이클 목표 달성! 오늘도 수고하셨어요."),
+                daemon=True,
+            ).start()
+            self._show_all_done_dialog()
+            return
+
+        # 세션 전환 OS 알림
+        if self.mode == "focus":
+            threading.Thread(
+                target=_notify,
+                args=("FocusMate 💪", "집중 세션 완료! 휴식 시간이에요."),
+                daemon=True,
+            ).start()
+        else:
+            threading.Thread(
+                target=_notify,
+                args=("FocusMate ⏰", "휴식 종료! 다음 집중 세션을 시작할게요."),
+                daemon=True,
+            ).start()
+
+        next_mode  = "rest" if self.mode == "focus" else "focus"
+        next_label = MODE_LABELS[next_mode]
+
+        if self.mode == "focus":
+            # 집중 → 휴식: 항상 자동 전환
             self._set_mode(next_mode)
             self.running = True
-            self.paused = False
-            self._thread = threading.Thread(target=self._tick, daemon=True)
-            self._thread.start()
+            self.paused  = False
+            self.page.run_task(self._tick_async)
+        elif self.auto_start:
+            # 휴식 → 집중: 자동 전환 켜져 있을 때만
+            self._set_mode(next_mode)
+            self.running = True
+            self.paused  = False
+            self.page.run_task(self._tick_async)
         else:
+            # 휴식 → 집중: 다이얼로그
             self._show_done_dialog(next_label, next_mode)
+
+    def _show_all_done_dialog(self):
+        def restart(_):
+            self.page.dialog.open = False
+            self.page.update()
+            self.sessions_done = 0
+            self._update_dots()
+            self._set_mode("focus")
+
+        self.page.dialog = ft.AlertDialog(
+            bgcolor=BG_CARD,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            content=ft.Container(
+                content=ft.Column(
+                    controls=[
+                        mascot_widget(56),
+                        ft.Text("목표 달성! 🎉", size=18, weight=ft.FontWeight.W_400,
+                                color=ACCENT, font_family="DOSSaemmul",
+                                text_align=ft.TextAlign.CENTER),
+                        ft.Text(f"{self.cycle_count}회 사이클을 완료했어요!",
+                                size=13, color=TEXT_SEC, font_family="DOSSaemmul",
+                                text_align=ft.TextAlign.CENTER),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=10,
+                ),
+                padding=ft.padding.only(left=20, top=16, right=20, bottom=8),
+            ),
+            actions=[
+                ft.TextButton("다시 시작", style=ft.ButtonStyle(color=ACCENT),
+                              on_click=restart),
+            ],
+        )
+        self.page.dialog.open = True
+        try:
+            self.page.update()
+        except Exception:
+            pass
 
     def _show_done_dialog(self, next_label: str, next_mode: str):
         def go_next(_):
@@ -199,186 +354,192 @@ class PomodoroView:
         except Exception:
             pass
 
+    # ── display update ───────────────────────────────────────────────────
     def _update_display(self):
-        if self.time_ref.current:
-            self.time_ref.current.value = self._fmt(self.remaining)
-        if self.ring_ref.current:
-            self.ring_ref.current.value = self.remaining / self.total if self.total else 0
-            self.ring_ref.current.color = MODES[self.mode]["color"]
         try:
-            self.page.update()
+            if self.time_ref.current:
+                self.time_ref.current.value = self._fmt(self.remaining)
+                self.time_ref.current.update()
+            if self.ring_ref.current:
+                self.ring_ref.current.value = self.remaining / self.total if self.total else 0
+                self.ring_ref.current.color = MODE_COLORS[self.mode]
+                self.ring_ref.current.update()
+            if self.mode_label_ref.current:
+                self.mode_label_ref.current.value = MODE_LABELS[self.mode]
+                self.mode_label_ref.current.update()
         except Exception:
             pass
 
-    def _mode_tab(self, mode: str) -> ft.Container:
-        cfg = MODES[mode]
-        is_active = mode == self.mode
-
-        def on_click(_):
-            self._set_mode(mode)
-
-        return ft.Container(
-            content=ft.Text(cfg["label"], size=12, weight=ft.FontWeight.W_400,
-                            color=cfg["color"] if is_active else TEXT_MUT,
-                            font_family="DOSSaemmul"),
-            bgcolor=ACCENT_LT if is_active else "transparent",
-            border_radius=8,
-            padding=ft.padding.only(left=14, top=7, right=14, bottom=7),
-            on_click=on_click,
-            border=ft.border.all(1, ACCENT if is_active else "transparent"),
-        )
-
-    def _session_dots(self) -> ft.Row:
+    # ── dots & history ───────────────────────────────────────────────────
+    def _dot_controls(self) -> list:
         dots = []
-        for i in range(8):
-            done = i < self.sessions_done
-            is_current = i == self.sessions_done
-            dots.append(
-                ft.Container(
-                    width=10, height=10,
-                    bgcolor=ACCENT if done else (ACCENT_LT if is_current else BORDER),
-                    border_radius=5,
-                    border=ft.border.all(1.5, ACCENT if (done or is_current) else BORDER),
-                )
-            )
-        return ft.Row(controls=dots, spacing=6, alignment=ft.MainAxisAlignment.CENTER)
+        for i in range(self.cycle_count):
+            done       = i < self.sessions_done
+            is_current = i == self.sessions_done and self.sessions_done < self.cycle_count
+            dots.append(ft.Container(
+                width=10, height=10,
+                bgcolor=ACCENT if done else (ACCENT_LT if is_current else BORDER),
+                border_radius=5,
+                border=ft.border.all(1.5, ACCENT if (done or is_current) else BORDER),
+            ))
+        return dots
+
+    def _update_dots(self):
+        if self.session_dots_ref.current:
+            self.session_dots_ref.current.controls = self._dot_controls()
+            self.session_dots_ref.current.update()
+        if self.cycle_text_ref.current:
+            self.cycle_text_ref.current.value = f"집중 진행 ({self.sessions_done}/{self.cycle_count}회)"
+            self.cycle_text_ref.current.update()
 
     def _history_rows(self) -> list:
         rows = []
-        for mode_l, start, end, status in self.history[-5:]:
-            rows.append(
-                ft.Container(
-                    content=ft.Row(
-                        controls=[
-                            ft.Container(
-                                width=8, height=8,
-                                bgcolor=ACCENT if "집중" in mode_l else PURPLE,
-                                border_radius=4,
-                            ),
-                            ft.Text(mode_l, size=13, color=TEXT_PRI,
-                                    font_family="DOSSaemmul", expand=True),
-                            ft.Text(f"{start} → {end}", size=11, color=TEXT_MUT,
-                                    font_family="DOSSaemmul"),
-                            ft.Container(
-                                content=ft.Text("완료", size=10, color=ACCENT,
-                                                font_family="DOSSaemmul"),
-                                bgcolor=ACCENT_LT,
-                                border_radius=6,
-                                padding=ft.padding.only(left=8, top=3, right=8, bottom=3),
-                            ),
-                        ],
-                        spacing=10,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    ),
-                    bgcolor=BG_CARD,
-                    border_radius=10,
-                    padding=ft.padding.only(left=14, top=10, right=14, bottom=10),
-                    border=ft.border.all(1, BORDER),
-                )
-            )
+        for mode_l, start, end, _ in self.history[-5:]:
+            color = ACCENT if mode_l == "집중" else PURPLE
+            rows.append(ft.Container(
+                content=ft.Row(
+                    controls=[
+                        ft.Container(width=8, height=8, bgcolor=color, border_radius=4),
+                        ft.Text(mode_l, size=13, color=TEXT_PRI,
+                                font_family="DOSSaemmul", expand=True),
+                        ft.Text(f"{start} → {end}", size=11, color=TEXT_MUT,
+                                font_family="DOSSaemmul"),
+                        ft.Container(
+                            content=ft.Text("완료", size=10, color=ACCENT,
+                                            font_family="DOSSaemmul"),
+                            bgcolor=ACCENT_LT, border_radius=6,
+                            padding=ft.padding.only(left=8, top=3, right=8, bottom=3),
+                        ),
+                    ],
+                    spacing=10,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                bgcolor=BG_CARD, border_radius=10,
+                padding=ft.padding.only(left=14, top=10, right=14, bottom=10),
+                border=ft.border.all(1, BORDER),
+            ))
         return rows
 
+    # ── build ────────────────────────────────────────────────────────────
     def build(self) -> ft.Container:
-        cfg = MODES[self.mode]
+
+        def _mode_tab(mode: str) -> ft.Container:
+            is_active = mode == self.mode
+            return ft.Container(
+                ref=self.tab_refs[mode],
+                content=ft.Text(
+                    ref=self.tab_text_refs[mode],
+                    value=MODE_LABELS[mode],
+                    size=12, weight=ft.FontWeight.W_400,
+                    color=MODE_COLORS[mode] if is_active else TEXT_MUT,
+                    font_family="DOSSaemmul",
+                ),
+                bgcolor=ACCENT_LT if is_active else "transparent",
+                border_radius=8,
+                padding=ft.padding.only(left=14, top=7, right=14, bottom=7),
+                on_click=lambda _, m=mode: self._set_mode(m),
+                border=ft.border.all(1, ACCENT if is_active else "transparent"),
+            )
 
         timer_area = card(
             ft.Column(
                 controls=[
+                    # 탭
                     ft.Container(
                         content=ft.Row(
-                            controls=[self._mode_tab(m) for m in MODES],
+                            controls=[_mode_tab("focus"), _mode_tab("rest")],
                             alignment=ft.MainAxisAlignment.CENTER,
                             spacing=8,
                         ),
-                        bgcolor=BG_CARD2,
-                        border_radius=10,
-                        padding=6,
-                        border=ft.border.all(1, BORDER),
+                        bgcolor=BG_CARD2, border_radius=10,
+                        padding=6, border=ft.border.all(1, BORDER),
                     ),
                     ft.Container(height=24),
+                    # 링 타이머
                     ft.Container(
                         width=200, height=200,
                         alignment=ft.Alignment(0, 0),
-                        content=ft.Stack(
-                            controls=[
-                                ft.ProgressRing(
-                                    ref=self.ring_ref,
-                                    value=1.0,
-                                    width=200, height=200,
-                                    stroke_width=14,
-                                    color=cfg["color"],
-                                    bgcolor=BORDER,
+                        content=ft.Stack(controls=[
+                            ft.ProgressRing(
+                                ref=self.ring_ref,
+                                value=1.0, width=200, height=200,
+                                stroke_width=14, color=ACCENT, bgcolor=BORDER,
+                            ),
+                            ft.Container(
+                                width=200, height=200,
+                                alignment=ft.Alignment(0, 0),
+                                content=ft.Column(
+                                    controls=[
+                                        ft.Text(
+                                            ref=self.time_ref,
+                                            value=self._fmt(self.remaining),
+                                            size=50, weight=ft.FontWeight.W_500,
+                                            color=TEXT_PRI, font_family="DOSSaemmul",
+                                            text_align=ft.TextAlign.CENTER,
+                                        ),
+                                        ft.Text(
+                                            ref=self.mode_label_ref,
+                                            value=MODE_LABELS[self.mode],
+                                            size=13, color=TEXT_MUT,
+                                            font_family="DOSSaemmul",
+                                            text_align=ft.TextAlign.CENTER,
+                                        ),
+                                    ],
+                                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                    alignment=ft.MainAxisAlignment.CENTER,
+                                    spacing=4,
                                 ),
-                                ft.Container(
-                                    width=200, height=200,
-                                    alignment=ft.Alignment(0, 0),
-                                    content=ft.Column(
-                                        controls=[
-                                            ft.Text(
-                                                ref=self.time_ref,
-                                                value=self._fmt(self.remaining),
-                                                size=50, weight=ft.FontWeight.W_500,
-                                                color=TEXT_PRI,
-                                                font_family="DOSSaemmul",
-                                                text_align=ft.TextAlign.CENTER,
-                                            ),
-                                            ft.Text(
-                                                ref=self.mode_label_ref,
-                                                value=cfg["label"],
-                                                size=13, color=TEXT_MUT,
-                                                font_family="DOSSaemmul",
-                                                text_align=ft.TextAlign.CENTER,
-                                            ),
-                                        ],
-                                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                        alignment=ft.MainAxisAlignment.CENTER,
-                                        spacing=4,
-                                    ),
-                                ),
-                            ],
-                        ),
+                            ),
+                        ]),
                     ),
                     ft.Container(height=18),
-                    self._session_dots(),
-                    ft.Text("세션 진행 (8회 사이클)",
-                            size=11, color=TEXT_MUT,
-                            font_family="DOSSaemmul",
-                            text_align=ft.TextAlign.CENTER),
-                    ft.Container(height=20),
                     ft.Row(
-                        ref=self.btn_row_ref,
+                        ref=self.session_dots_ref,
+                        controls=self._dot_controls(),
+                        spacing=6,
+                        alignment=ft.MainAxisAlignment.CENTER,
+                    ),
+                    ft.Text(
+                        ref=self.cycle_text_ref,
+                        value=f"집중 진행 ({self.sessions_done}/{self.cycle_count}회)",
+                        size=11, color=TEXT_MUT,
+                        font_family="DOSSaemmul",
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    ft.Container(height=20),
+                    # 버튼 행
+                    ft.Row(
                         controls=[
                             ft.Container(
-                                content=ft.Text("\ue042", font_family="Material Icons",
-                                               size=20, color=TEXT_MUT),
-                                width=46, height=46,
-                                border_radius=23,
+                                content=ft.Icon(ft.Icons.REPLAY, size=20, color=TEXT_MUT),
+                                width=46, height=46, border_radius=23,
                                 border=ft.border.all(1.5, BORDER),
                                 alignment=ft.Alignment(0, 0),
                                 on_click=self._reset,
                             ),
                             ft.Container(
-                                content=ft.Text(ref=self.play_icon_ref,
-                                               value="\ue037",
-                                               font_family="Material Icons",
-                                               size=26, color="#FFFFFF"),
-                                width=68, height=68,
-                                border_radius=34,
-                                bgcolor=cfg["color"],
+                                ref=self.play_btn_ref,
+                                content=ft.Icon(
+                                    ref=self.play_icon_ref,
+                                    icon=ft.Icons.PLAY_ARROW,
+                                    size=26, color="#FFFFFF",
+                                ),
+                                width=68, height=68, border_radius=34,
+                                bgcolor=ACCENT,
                                 alignment=ft.Alignment(0, 0),
                                 on_click=self._start_stop,
                                 shadow=ft.BoxShadow(
-                                    blur_radius=18, color=cfg["color"] + "55",
+                                    blur_radius=18, color=ACCENT + "55",
                                     offset=ft.Offset(0, 4),
                                 ),
                             ),
                             ft.Container(
-                                content=ft.Text("\ue044", font_family="Material Icons",
-                                               size=20, color=TEXT_MUT),
-                                width=46, height=46,
-                                border_radius=23,
+                                content=ft.Icon(ft.Icons.SKIP_NEXT, size=20, color=TEXT_MUT),
+                                width=46, height=46, border_radius=23,
                                 border=ft.border.all(1.5, BORDER),
                                 alignment=ft.Alignment(0, 0),
+                                on_click=self._skip_next,
+                                tooltip="다음 세션으로",
                             ),
                         ],
                         alignment=ft.MainAxisAlignment.CENTER,
@@ -392,7 +553,72 @@ class PomodoroView:
             padding=28,
         )
 
-        # 설정 사이드바
+        # ── 설정 ─────────────────────────────────────────────────────────
+        def on_focus_change(e):
+            self.focus_minutes = int(round(e.control.value / 5) * 5)
+            if self.focus_label_ref.current:
+                self.focus_label_ref.current.value = f"집중 시간  {self.focus_minutes}분"
+                self.focus_label_ref.current.update()
+            if self.mode == "focus" and not self.running:
+                self.remaining = self.focus_minutes * 60
+                self.total     = self.remaining
+                self._update_display()
+
+        def on_rest_change(e):
+            self.rest_minutes = int(round(e.control.value / 5) * 5)
+            if self.rest_label_ref.current:
+                self.rest_label_ref.current.value = f"휴식 시간  {self.rest_minutes}분"
+                self.rest_label_ref.current.update()
+            if self.mode == "rest" and not self.running:
+                self.remaining = self.rest_minutes * 60
+                self.total     = self.remaining
+                self._update_display()
+
+        def on_cycle_change(e):
+            self.cycle_count = int(round(e.control.value))
+            if self.cycle_label_ref.current:
+                self.cycle_label_ref.current.value = f"목표 사이클  {self.cycle_count}회"
+                self.cycle_label_ref.current.update()
+            # 이미 완료한 세션이 새 목표보다 많으면 리셋
+            if self.sessions_done > self.cycle_count:
+                self.sessions_done = 0
+            self._update_dots()
+
+        def toggle_test_mode(e):
+            self.test_mode = not self.test_mode
+            self.running   = False
+            self.paused    = False
+
+            if self.test_mode:
+                # 원래 설정 저장 후 테스트 값으로 교체
+                self._saved_cycle_count = self.cycle_count
+                self.cycle_count = 2
+            else:
+                # 원래 설정 복원
+                self.cycle_count = getattr(self, "_saved_cycle_count", self.cycle_count)
+
+            # 세션 카운트 리셋
+            self.sessions_done = 0
+            self._update_dots()
+
+            if self.test_btn_ref.current:
+                self.test_btn_ref.current.bgcolor = DANGER if self.test_mode else BG_CARD2
+                self.test_btn_ref.current.border  = ft.border.all(1.5, DANGER if self.test_mode else BORDER)
+                lbl: ft.Text = self.test_btn_ref.current.content
+                lbl.value = "🧪 테스트 모드 ON  (10초 × 2회)" if self.test_mode else "🧪 테스트 모드"
+                lbl.color = "#FFFFFF" if self.test_mode else TEXT_MUT
+                self.test_btn_ref.current.update()
+
+            # 현재 세션 즉시 리셋
+            secs = 10 if self.test_mode else (
+                self.focus_minutes if self.mode == "focus" else self.rest_minutes) * 60
+            self.remaining = secs
+            self.total     = secs
+            if self.play_icon_ref.current:
+                self.play_icon_ref.current.icon = ft.Icons.PLAY_ARROW
+                self.play_icon_ref.current.update()
+            self._set_mode("focus")
+
         def toggle_sound(e):
             self.sound_on = e.control.value
 
@@ -404,43 +630,75 @@ class PomodoroView:
                 controls=[
                     ft.Text("설정", size=14, weight=ft.FontWeight.W_400,
                             color=TEXT_PRI, font_family="DOSSaemmul"),
-                    ft.Container(height=12),
-                    *[
-                        ft.Column(
-                            controls=[
-                                ft.Text(label, size=12, color=TEXT_SEC,
-                                        font_family="DOSSaemmul"),
-                                ft.Slider(
-                                    min=1, max=60, value=val,
-                                    active_color=ACCENT,
-                                    inactive_color=BORDER,
-                                    thumb_color=ACCENT,
-                                    label="{value}분",
-                                ),
-                            ],
-                            spacing=2,
-                        )
-                        for label, val in [("집중 시간", 25), ("짧은 휴식", 5), ("긴 휴식", 15)]
-                    ],
+                    ft.Container(height=8),
+                    # 집중 시간 슬라이더
+                    ft.Column(controls=[
+                        ft.Text(ref=self.focus_label_ref,
+                                value=f"집중 시간  {self.focus_minutes}분",
+                                size=12, color=TEXT_SEC, font_family="DOSSaemmul"),
+                        ft.Slider(
+                            min=5, max=60, value=self.focus_minutes,
+                            divisions=11,
+                            active_color=ACCENT, inactive_color=BORDER, thumb_color=ACCENT,
+                            on_change=on_focus_change,
+                        ),
+                    ], spacing=2),
+                    # 휴식 시간 슬라이더
+                    ft.Column(controls=[
+                        ft.Text(ref=self.rest_label_ref,
+                                value=f"휴식 시간  {self.rest_minutes}분",
+                                size=12, color=TEXT_SEC, font_family="DOSSaemmul"),
+                        ft.Slider(
+                            min=5, max=30, value=self.rest_minutes,
+                            divisions=5,
+                            active_color=PURPLE, inactive_color=BORDER, thumb_color=PURPLE,
+                            on_change=on_rest_change,
+                        ),
+                    ], spacing=2),
+                    # 목표 사이클 슬라이더
+                    ft.Column(controls=[
+                        ft.Text(ref=self.cycle_label_ref,
+                                value=f"목표 사이클  {self.cycle_count}회",
+                                size=12, color=TEXT_SEC, font_family="DOSSaemmul"),
+                        ft.Slider(
+                            min=1, max=8, value=self.cycle_count,
+                            divisions=7,
+                            active_color=WARNING, inactive_color=BORDER, thumb_color=WARNING,
+                            on_change=on_cycle_change,
+                        ),
+                    ], spacing=2),
                     ft.Container(height=4),
                     ft.Divider(color=BORDER, height=1),
                     ft.Container(height=4),
-                    ft.Row(
-                        controls=[
-                            ft.Text("알림음", size=12, color=TEXT_SEC,
-                                    font_family="DOSSaemmul", expand=True),
-                            ft.Switch(value=True, active_color=ACCENT, scale=0.8,
-                                      on_change=toggle_sound),
-                        ],
+                    # 테스트 모드 버튼
+                    ft.Container(
+                        ref=self.test_btn_ref,
+                        content=ft.Text("🧪 테스트 모드", size=12,
+                                        color=TEXT_MUT, font_family="DOSSaemmul",
+                                        text_align=ft.TextAlign.CENTER),
+                        bgcolor=BG_CARD2,
+                        border_radius=8,
+                        border=ft.border.all(1.5, BORDER),
+                        padding=ft.padding.symmetric(vertical=8),
+                        alignment=ft.Alignment(0, 0),
+                        on_click=toggle_test_mode,
+                        tooltip="집중/휴식을 각 10초로 설정",
+                        expand=True,
                     ),
-                    ft.Row(
-                        controls=[
-                            ft.Text("자동 전환", size=12, color=TEXT_SEC,
-                                    font_family="DOSSaemmul", expand=True),
-                            ft.Switch(value=False, active_color=ACCENT, scale=0.8,
-                                      on_change=toggle_auto),
-                        ],
-                    ),
+                    ft.Divider(color=BORDER, height=1),
+                    ft.Container(height=4),
+                    ft.Row(controls=[
+                        ft.Text("알림음", size=12, color=TEXT_SEC,
+                                font_family="DOSSaemmul", expand=True),
+                        ft.Switch(value=True, active_color=ACCENT, scale=0.8,
+                                  on_change=toggle_sound),
+                    ]),
+                    ft.Row(controls=[
+                        ft.Text("자동 전환", size=12, color=TEXT_SEC,
+                                font_family="DOSSaemmul", expand=True),
+                        ft.Switch(value=False, active_color=ACCENT, scale=0.8,
+                                  on_change=toggle_auto),
+                    ]),
                 ],
                 spacing=10,
             ),
@@ -463,27 +721,23 @@ class PomodoroView:
 
         right_col = ft.Column(
             controls=[settings, ft.Container(height=12), history_card],
-            width=270,
-            spacing=0,
+            width=270, spacing=0,
         )
 
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Row(
-                        controls=[
-                            ft.Column(
-                                controls=[
-                                    ft.Text("뽀모도로 타이머", size=26, weight=ft.FontWeight.W_400,
-                                            color=TEXT_PRI, font_family="DOSSaemmul"),
-                                    ft.Text("집중과 휴식의 리듬을 만들어보세요",
-                                            size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
-                                ],
-                                spacing=2,
-                                expand=True,
-                            ),
-                        ],
-                    ),
+                    ft.Row(controls=[
+                        ft.Column(
+                            controls=[
+                                ft.Text("뽀모도로 타이머", size=26, weight=ft.FontWeight.W_400,
+                                        color=TEXT_PRI, font_family="DOSSaemmul"),
+                                ft.Text("집중과 휴식의 리듬을 만들어보세요",
+                                        size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
+                            ],
+                            spacing=2, expand=True,
+                        ),
+                    ]),
                     ft.Container(height=16),
                     ft.Row(
                         controls=[

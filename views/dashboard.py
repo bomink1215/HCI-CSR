@@ -70,11 +70,7 @@ class DashboardView:
                 ft.Row(
                     controls=[
                         ft.Container(
-                            content=ft.Text(
-                                "\ue876" if done else "",
-                                font_family="Material Icons", size=11,
-                                color="#FFFFFF" if done else "transparent",
-                            ),
+                            content=ft.Icon(ft.Icons.DONE, size=11, color="#FFFFFF" if done else "transparent"),
                             width=18, height=18, border_radius=5,
                             border=ft.border.all(1.5, ACCENT if done else BORDER),
                             bgcolor=ACCENT if done else "transparent",
@@ -208,7 +204,7 @@ class DashboardView:
                         ft.Container(expand=True),
                         ghost_btn("모두 보기",
                                   on_click=lambda _: self.navigate("todo"),
-                                  icon="\ue5c8"),
+                                  icon=ft.Icons.ARROW_FORWARD),
                     ],
                     spacing=0,
                 ),
@@ -230,7 +226,7 @@ class DashboardView:
                         ft.Container(expand=1),
                         accent_btn("시작하기",
                                    on_click=lambda _: self.navigate("pomodoro"),
-                                   icon="\ue037"),
+                                   icon=ft.Icons.PLAY_ARROW),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=2,
@@ -390,7 +386,7 @@ class DashboardView:
                         ft.Container(expand=True),
                         ghost_btn("전체 보기",
                                   on_click=lambda _: self.navigate("ranking"),
-                                  icon="\ue5c8"),
+                                  icon=ft.Icons.ARROW_FORWARD),
                     ],
                     spacing=4,
                 ),

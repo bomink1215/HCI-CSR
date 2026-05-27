@@ -136,12 +136,7 @@ class TodoView:
             content=ft.Row(
                 controls=[
                     ft.Container(
-                        content=ft.Text(
-                            "\ue876" if done else "",
-                            font_family="Material Icons",
-                            size=13,
-                            color="#FFFFFF" if done else "transparent",
-                        ),
+                        content=ft.Icon(ft.Icons.DONE, size=13, color="#FFFFFF" if done else "transparent"),
                         width=24, height=24,
                         border_radius=7,
                         border=ft.border.all(1.5, ACCENT if done else BORDER),
@@ -172,8 +167,7 @@ class TodoView:
                         expand=True,
                     ),
                     ft.Container(
-                        content=ft.Text("\ue872", font_family="Material Icons",
-                                       size=16, color=TEXT_MUT),
+                        content=ft.Icon(ft.Icons.DELETE, size=16, color=TEXT_MUT),
                         on_click=delete,
                         padding=4,
                         tooltip="삭제",
@@ -286,8 +280,7 @@ class TodoView:
             controls=[
                 self.new_text,
                 ft.Container(
-                    content=ft.Text("\ue145", font_family="Material Icons",
-                                   size=20, color="#FFFFFF"),
+                    content=ft.Icon(ft.Icons.ADD, size=20, color="#FFFFFF"),
                     bgcolor=ACCENT,
                     border_radius=10,
                     width=44, height=44,

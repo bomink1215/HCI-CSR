@@ -390,7 +390,7 @@ class RankingView:
                                 spacing=2,
                                 expand=True,
                             ),
-                            ghost_btn("친구 추가", icon="\ue7fe"),
+                            ghost_btn("친구 추가", icon=ft.Icons.PERSON_ADD),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),

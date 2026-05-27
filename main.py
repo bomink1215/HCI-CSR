@@ -19,14 +19,17 @@ def main(page: ft.Page):
     page.title = "FocusMate"
     page.theme = APP_THEME
     page.bgcolor = BG_BASE
-    page.window_width = 1100
-    page.window_height = 740
-    page.window_min_width = 900
-    page.window_min_height = 620
     page.padding = 0
     page.fonts = {
         "DOSSaemmul": "fonts/DOSSaemmul.ttf",
     }
+
+    # 5:3 비율 고정 (width:height = 5:3)
+    page.window.width        = 1000
+    page.window.height       = 600
+    page.window.min_width    = 960
+    page.window.min_height   = 576
+    page.window.aspect_ratio = 5 / 3
 
     current_view_name = ["dashboard"]
     views = {}

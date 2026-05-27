@@ -57,14 +57,14 @@ def section_title(text: str, sub: str = "") -> ft.Column:
     return ft.Column(controls=controls, spacing=2)
 
 
-def accent_btn(label: str, on_click=None, icon: str = "", width=None,
+def accent_btn(label: str, on_click=None, icon=None, width=None,
                color=ACCENT) -> ft.Container:
     return ft.Container(
         content=ft.Row(
             controls=[
                 *(
-                    [ft.Text(icon, font_family="Material Icons", size=16, color="#FFFFFF")]
-                    if icon else []
+                    [ft.Icon(icon, size=16, color="#FFFFFF")]
+                    if icon is not None else []
                 ),
                 ft.Text(label, size=13, weight=W_MEDIUM,
                         color="#FFFFFF", font_family=FONT),
@@ -84,13 +84,13 @@ def accent_btn(label: str, on_click=None, icon: str = "", width=None,
     )
 
 
-def ghost_btn(label: str, on_click=None, icon: str = "") -> ft.Container:
+def ghost_btn(label: str, on_click=None, icon=None) -> ft.Container:
     return ft.Container(
         content=ft.Row(
             controls=[
                 *(
-                    [ft.Text(icon, font_family="Material Icons", size=16, color=ACCENT)]
-                    if icon else []
+                    [ft.Icon(icon, size=16, color=ACCENT)]
+                    if icon is not None else []
                 ),
                 ft.Text(label, size=13, weight=W_MEDIUM,
                         color=ACCENT, font_family=FONT),
