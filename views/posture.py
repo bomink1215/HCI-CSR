@@ -30,7 +30,18 @@ def _find_model():
     return None
 
 
+# 자세 유형 상수
+POSTURE_TURTLE  = "turtle_neck"      # 거북목
+POSTURE_ROUNDED = "rounded_back"     # 등 굽음
+POSTURE_TILT    = "shoulder_tilt"    # 어깨 불균형
+POSTURE_OK      = "good"             # 정상
+
+
 def _calc_score(landmarks) -> tuple:
+    """
+    Returns: (score: int, issues: list[str], posture_type: str)
+    posture_type은 가장 심각한 문제 하나를 반환합니다.
+    """
     try:
         nose       = landmarks[0]
         l_ear      = landmarks[7];  r_ear      = landmarks[8]
@@ -38,36 +49,60 @@ def _calc_score(landmarks) -> tuple:
         l_hip      = landmarks[23]; r_hip      = landmarks[24]
 
         score, issues = 100, []
+        deductions = {
+            POSTURE_TURTLE:  0,
+            POSTURE_TILT:    0,
+            POSTURE_ROUNDED: 0,
+        }
 
+        # 거북목: 코가 어깨 중심보다 앞으로 나옴
         sh_mid_x = (l_shoulder.x + r_shoulder.x) / 2
         fwd = abs(nose.x - sh_mid_x)
         if fwd > 0.08:
-            score -= min(30, int(fwd * 200))
+            ded = min(30, int(fwd * 200))
+            score -= ded
+            deductions[POSTURE_TURTLE] += ded
             issues.append("거북목 주의! 머리를 뒤로 당겨주세요")
 
+        # 어깨 불균형: 좌우 어깨 높이 차이
         tilt = abs(l_shoulder.y - r_shoulder.y)
         if tilt > 0.04:
-            score -= min(20, int(tilt * 300))
+            ded = min(20, int(tilt * 300))
+            score -= ded
+            deductions[POSTURE_TILT] += ded
             issues.append("어깨가 한쪽으로 기울었어요")
 
+        # 등 굽음: 어깨 중심과 엉덩이 중심의 수평 이탈
         hip_mid_x = (l_hip.x + r_hip.x) / 2
         lean = abs(sh_mid_x - hip_mid_x)
         if lean > 0.06:
-            score -= min(25, int(lean * 250))
+            ded = min(25, int(lean * 250))
+            score -= ded
+            deductions[POSTURE_ROUNDED] += ded
             issues.append("등이 굽었어요 — 등을 펴주세요")
 
+        # 고개 숙임: 귀가 어깨보다 낮은 위치
         sh_mid_y  = (l_shoulder.y + r_shoulder.y) / 2
         ear_mid_y = (l_ear.y + r_ear.y) / 2
         if ear_mid_y - sh_mid_y > -0.10:
             score -= 15
+            deductions[POSTURE_TURTLE] += 15
             issues.append("고개를 들어주세요")
 
         score = max(0, min(100, score))
+
+        # 가장 감점이 큰 유형을 대표 타입으로 선택
+        posture_type = POSTURE_OK
+        if any(v > 0 for v in deductions.values()):
+            posture_type = max(deductions, key=deductions.get)
+
         if not issues:
             issues.append("자세 좋아요! 계속 유지하세요 👍")
-        return score, issues
+
+        return score, issues, posture_type
+
     except Exception as e:
-        return 0, [f"분석 오류: {e}"]
+        return 0, [f"분석 오류: {e}"], POSTURE_OK
 
 
 class PostureView:
@@ -167,10 +202,13 @@ class PostureView:
                     result = None
 
                 issues = ["사람을 감지하지 못했어요"]
+                posture_type = POSTURE_OK
                 if result and result.pose_landmarks:
                     lm = result.pose_landmarks[0]
-                    score, issues = _calc_score(lm)
+                    # ★ posture_type도 함께 받아서 alert_manager에 전달
+                    score, issues, posture_type = _calc_score(lm)
                     alert_manager.set_score(score)
+                    alert_manager.set_posture_type(posture_type)  # ★ 추가
 
                     pts = [(int(l.x * w), int(l.y * h)) for l in lm]
                     for a, b in SKEL_CONNS:
