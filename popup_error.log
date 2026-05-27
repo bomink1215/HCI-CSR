@@ -1,5 +1,0 @@
-Traceback (most recent call last):
-  File "C:\Users\bomin\Desktop\HCI-CSR\utils\alert_manager.py", line 92, in _show_popup
-    meta   = POSTURE_META.get(posture_type, POSTURE_META[POSTURE_OK])
-                                            ~~~~~~~~~~~~^^^^^^^^^^^^
-KeyError: 'good'
