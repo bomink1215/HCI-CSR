@@ -156,12 +156,12 @@ def _show_popup(score: int, posture_type: str):
         # ── 점수 배지 ───────────────────────────────────────────────
         tk.Label(content, text=f"  Posture Score: {score}  ",
                  bg=accent, fg="#FFFFFF",
-                 font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(3, 0))
+                 font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(3, 10))
 
 
         # ── 버튼 행 ─────────────────────────────────────────────────
         btn_row = tk.Frame(content, bg="#FFFFFF")
-        btn_row.pack(anchor="w")
+        btn_row.pack(anchor="w", pady=(0, 6))
 
         def on_fix():
             slide_out()
@@ -274,7 +274,7 @@ def _show_popup_no_image(score: int, posture_type: str):
 
 
         btn_row = tk.Frame(content, bg="#FFFFFF")
-        btn_row.pack(anchor="w")
+        btn_row.pack(anchor="w", pady=(0, 6))
 
         def slide_out(step=0):
             if step > 15:

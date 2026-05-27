@@ -169,10 +169,10 @@ class PostureView:
         alert_manager.set_monitoring(True)
 
         import time
-        frame_ts  = 0
-        fps_timer = time.time()
-        fps_count = 0
-        score     = 0
+        start_time = time.time()
+        fps_timer  = time.time()
+        fps_count  = 0
+        score      = 0
 
         win_name = "FocusMate — 자세 분석 (Q: 종료)"
         cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
@@ -195,9 +195,9 @@ class PostureView:
                 rgb   = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
 
-                frame_ts += 33
+                frame_ts_ms = int((time.time() - start_time) * 1000)
                 try:
-                    result = landmarker.detect_for_video(mp_img, frame_ts)
+                    result = landmarker.detect_for_video(mp_img, frame_ts_ms)
                 except Exception:
                     result = None
 
@@ -218,9 +218,7 @@ class PostureView:
                         cv2.circle(frame, (x, y), 4, (0, 201, 167), -1, cv2.LINE_AA)
 
                 color_bgr = (0,201,167) if score>=70 else (71,179,255) if score>=50 else (92,92,255)
-                overlay = frame.copy()
-                cv2.rectangle(overlay, (0, 0), (w, 70), (244, 246, 248), -1)
-                cv2.addWeighted(overlay, 0.8, frame, 0.2, 0, frame)
+                cv2.rectangle(frame, (0, 0), (w, 70), (244, 246, 248), -1)
                 cv2.putText(frame, f"Score: {score}",
                             (14, 38), cv2.FONT_HERSHEY_SIMPLEX, 1.1, color_bgr, 2, cv2.LINE_AA)
                 cv2.putText(frame, issues[0] if issues else "",
