@@ -8,24 +8,99 @@ from components.ui import card, mascot_widget
 
 
 def _notify(title: str, message: str):
-    """OS 레벨 팝업 알림 (백그라운드에서도 표시)"""
-    try:
-        if sys.platform == "darwin":
+    """OS 알림 (플랫폼별 최적 방식)"""
+    if sys.platform == "darwin":
+        # macOS: 네이티브 알림센터
+        try:
             script = (
                 f'display notification "{message}" '
                 f'with title "{title}" '
                 f'sound name "Glass"'
             )
             subprocess.Popen(["osascript", "-e", script])
-        else:
-            # Windows / Linux: tkinter 커스텀 팝업
-            _notify_tkinter(title, message)
+        except Exception:
+            pass
+    elif sys.platform == "win32":
+        # Windows: 별도 프로세스로 tkinter 팝업 → Tcl_AsyncDelete 방지
+        _notify_subprocess(title, message)
+    else:
+        # Linux: 스레드로 tkinter 팝업
+        threading.Thread(target=_notify_tkinter, args=(title, message), daemon=True).start()
+
+
+def _notify_subprocess(title: str, message: str):
+    """Windows 전용 — subprocess로 tkinter 팝업 실행"""
+    try:
+        script = r"""
+import sys
+import tkinter as tk
+
+title   = sys.argv[1]
+message = sys.argv[2]
+
+ACCENT = "#00C9A7"
+W, H   = 300, 90
+
+root = tk.Tk()
+root.overrideredirect(True)
+root.attributes("-topmost", True)
+root.attributes("-alpha", 0.0)
+root.configure(bg="#FFFFFF")
+
+sw = root.winfo_screenwidth()
+sh = root.winfo_screenheight()
+x       = sw - W - 16
+y_final = sh - H - 56
+y_start = sh + H
+
+root.geometry(f"{W}x{H}+{x}+{y_start}")
+
+outer = tk.Frame(root, bg=ACCENT, padx=2, pady=2)
+outer.pack(fill="both", expand=True)
+inner = tk.Frame(outer, bg="#1A1D23", padx=12, pady=10)
+inner.pack(fill="both", expand=True)
+
+tk.Label(inner, text=title, bg="#1A1D23", fg=ACCENT,
+         font=("Segoe UI", 10, "bold")).pack(anchor="w")
+tk.Label(inner, text=message, bg="#1A1D23", fg="#FFFFFF",
+         font=("Segoe UI", 9), wraplength=260,
+         justify="left").pack(anchor="w", pady=(4, 0))
+
+def slide_in(step=0):
+    if step > 20:
+        root.after(4000, slide_out)
+        return
+    t    = step / 20
+    ease = 1 - (1 - t) ** 3
+    root.geometry(f"{W}x{H}+{x}+{int(y_start + (y_final - y_start) * ease)}")
+    root.attributes("-alpha", min(1.0, ease * 1.5))
+    root.after(15, lambda: slide_in(step + 1))
+
+def slide_out(step=0):
+    if step > 15:
+        root.destroy()
+        return
+    t = step / 15
+    try:
+        root.geometry(f"{W}x{H}+{x}+{int(y_final + (sh - y_final) * t ** 2)}")
+        root.attributes("-alpha", max(0.0, 1.0 - t))
+        root.after(12, lambda: slide_out(step + 1))
+    except Exception:
+        pass
+
+slide_in()
+root.mainloop()
+"""
+        subprocess.Popen(
+            [sys.executable, "-c", script, title, message],
+            creationflags=0x08000000,  # CREATE_NO_WINDOW
+        )
     except Exception:
         pass
 
 
 def _notify_tkinter(title: str, message: str):
-    """오른쪽 하단 슬라이드 팝업 (Windows / Linux)"""
+    """macOS / Linux 전용 — 스레드에서 tkinter 팝업 실행"""
     try:
         import tkinter as tk
 
@@ -40,7 +115,7 @@ def _notify_tkinter(title: str, message: str):
 
         sw = root.winfo_screenwidth()
         sh = root.winfo_screenheight()
-        x  = sw - W - 16
+        x       = sw - W - 16
         y_final = sh - H - 56
         y_start = sh + H
 
@@ -52,16 +127,16 @@ def _notify_tkinter(title: str, message: str):
         inner.pack(fill="both", expand=True)
 
         tk.Label(inner, text=title, bg="#1A1D23", fg=ACCENT,
-                 font=("Segoe UI", 10, "bold")).pack(anchor="w")
+                 font=("Helvetica", 10, "bold")).pack(anchor="w")
         tk.Label(inner, text=message, bg="#1A1D23", fg="#FFFFFF",
-                 font=("Segoe UI", 9), wraplength=260,
+                 font=("Helvetica", 9), wraplength=260,
                  justify="left").pack(anchor="w", pady=(4, 0))
 
         def slide_in(step=0):
             if step > 20:
                 root.after(4000, slide_out)
                 return
-            t   = step / 20
+            t    = step / 20
             ease = 1 - (1 - t) ** 3
             root.geometry(f"{W}x{H}+{x}+{int(y_start + (y_final - y_start) * ease)}")
             root.attributes("-alpha", min(1.0, ease * 1.5))
@@ -317,12 +392,18 @@ class PomodoroView:
             self._set_mode(next_mode)
             self.running = True
             self.paused  = False
+            if self.play_icon_ref.current:
+                self.play_icon_ref.current.icon = ft.Icons.PAUSE
+                self.play_icon_ref.current.update()
             self.page.run_task(self._tick_async)
         elif self.auto_start:
             # 휴식 → 집중: 자동 전환 켜져 있을 때만
             self._set_mode(next_mode)
             self.running = True
             self.paused  = False
+            if self.play_icon_ref.current:
+                self.play_icon_ref.current.icon = ft.Icons.PAUSE
+                self.play_icon_ref.current.update()
             self.page.run_task(self._tick_async)
         else:
             # 휴식 → 집중: 다이얼로그

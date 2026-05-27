@@ -25,8 +25,8 @@ def main(page: ft.Page):
     }
 
     # 5:3 비율 고정 (width:height = 5:3)
-    page.window.width        = 1000
-    page.window.height       = 600
+    page.window.width        = 1200
+    page.window.height       = 720
     page.window.min_width    = 960
     page.window.min_height   = 576
     page.window.aspect_ratio = 5 / 3
