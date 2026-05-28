@@ -125,7 +125,7 @@ def _show_popup(score: int, posture_type: str):
             img_lbl.image = tk_img
             img_lbl.pack(anchor="w", pady=(0, 4))
 
-        tk.Label(content, text="FocusMate", bg="#FFFFFF",
+        tk.Label(content, text="ZZOOK", bg="#FFFFFF",
                  fg="#9DA8B7", font=("Segoe UI", 8)).pack(anchor="w")
 
         top_row = tk.Frame(content, bg="#FFFFFF")
@@ -213,7 +213,7 @@ def _show_popup_simple(score: int, posture_type: str):
         content = tk.Frame(inner, bg="#FFFFFF", padx=14, pady=12)
         content.pack(side="left", fill="both", expand=True)
 
-        tk.Label(content, text="FocusMate", bg="#FFFFFF",
+        tk.Label(content, text="ZZOOK", bg="#FFFFFF",
                  fg="#9DA8B7", font=("Segoe UI", 8)).pack(anchor="w")
         top_row = tk.Frame(content, bg="#FFFFFF"); top_row.pack(anchor="w", pady=(1,0))
         tk.Label(top_row, text=meta["emoji"], bg="#FFFFFF",

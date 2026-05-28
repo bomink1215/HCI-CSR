@@ -100,7 +100,7 @@ class NavBar:
             content=ft.Column(
                 controls=[
                     ft.Container(
-                        content=ft.Text("F", size=20, weight=ft.FontWeight.W_400,
+                        content=ft.Text("Z", size=20, weight=ft.FontWeight.W_400,
                                         color="#FFFFFF", font_family="DOSSaemmul"),
                         width=38, height=38,
                         bgcolor=ACCENT,
@@ -109,7 +109,7 @@ class NavBar:
                         shadow=ft.BoxShadow(blur_radius=12, color=ACCENT + "55",
                                             offset=ft.Offset(0, 3)),
                     ),
-                    ft.Text("Focus\nMate", size=10, color=ACCENT,
+                    ft.Text("ZZOOK", size=11, color=ACCENT,
                             weight=ft.FontWeight.W_400, text_align=ft.TextAlign.CENTER,
                             font_family="DOSSaemmul"),
                 ],

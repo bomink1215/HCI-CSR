@@ -161,7 +161,7 @@ class DashboardView:
                     ft.Column(
                         controls=[
                             mascot_widget(44),
-                            ft.Text("FocusMate", size=9, color=TEXT_MUT,
+                            ft.Text("ZZOOK", size=9, color=TEXT_MUT,
                                     font_family=FONT, text_align=ft.TextAlign.CENTER),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,

@@ -16,7 +16,7 @@ BG_BASE = "#FFFFFF"
 
 
 def main(page: ft.Page):
-    page.title = "FocusMate"
+    page.title = "ZZOOK"
     page.theme = APP_THEME
     page.bgcolor = BG_BASE
     page.padding = 0

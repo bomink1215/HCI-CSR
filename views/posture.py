@@ -313,7 +313,7 @@ class PostureView:
         alert_manager.set_monitoring(True)
 
         import cv2 as _cv2
-        win_name   = "FocusMate — Posture Analysis (Q: quit)"
+        win_name   = "ZZOOK — Posture Analysis (Q: quit)"
         start_time = time.time()
         _cv2.namedWindow(win_name, _cv2.WINDOW_NORMAL)
         _cv2.resizeWindow(win_name, 800, 600)
