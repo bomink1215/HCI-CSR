@@ -13,7 +13,6 @@ ALERT_INTERVAL  = 60
 CHECK_INTERVAL  = 5
 BAD_COUNT_LIMIT = 3
 
-# ── 자세 유형 상수 ───────────────────────────────────────────────
 POSTURE_ROUNDED = "rounded_back"
 POSTURE_SLOUCH  = "slouch"
 POSTURE_TILT    = "shoulder_tilt"
@@ -78,7 +77,6 @@ def get_posture_type() -> str:
         return _posture_type[0]
 
 
-# ── 팝업 ─────────────────────────────────────────────────────────
 def _show_popup(score: int, posture_type: str):
     try:
         import tkinter as tk

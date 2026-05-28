@@ -16,15 +16,15 @@ TEXT_MUT  = "#9DA8B7"
 BORDER    = "#E2E6EC"
 
 PRIORITY_COLORS = {
-    "높음": DANGER,
-    "보통": WARNING,
-    "낮음": ACCENT,
+    "High":   DANGER,
+    "Medium": WARNING,
+    "Low":    ACCENT,
 }
 CATEGORY_COLORS = {
-    "업무": ACCENT,
-    "개인": PURPLE,
-    "건강": "#34D399",
-    "학습": WARNING,
+    "Work":    ACCENT,
+    "Personal": PURPLE,
+    "Health":  "#34D399",
+    "Study":   WARNING,
 }
 
 
@@ -32,22 +32,22 @@ class TodoView:
     def __init__(self, page: ft.Page):
         self.page = page
         self.tasks = [
-            {"title": "프로젝트 기획서 작성", "done": True,  "priority": "높음", "cat": "업무",
-             "note": "3페이지 분량", "due": "2025-04-15"},
-            {"title": "팀 미팅 준비",         "done": True,  "priority": "높음", "cat": "업무",
-             "note": "", "due": "2025-04-14"},
-            {"title": "코드 리뷰",             "done": False, "priority": "보통", "cat": "업무",
-             "note": "PR #42", "due": "2025-04-16"},
-            {"title": "문서화 작업",           "done": False, "priority": "낮음", "cat": "업무",
-             "note": "", "due": ""},
-            {"title": "운동 30분",             "done": False, "priority": "보통", "cat": "건강",
-             "note": "스트레칭 포함", "due": "2025-04-14"},
-            {"title": "독서 20페이지",         "done": False, "priority": "낮음", "cat": "학습",
-             "note": "", "due": ""},
+            {"title": "Write project proposal", "done": True,  "priority": "High",   "cat": "Work",
+             "note": "3 pages",     "due": "2025-04-15"},
+            {"title": "Prepare team meeting",   "done": True,  "priority": "High",   "cat": "Work",
+             "note": "",            "due": "2025-04-14"},
+            {"title": "Code review",            "done": False, "priority": "Medium", "cat": "Work",
+             "note": "PR #42",      "due": "2025-04-16"},
+            {"title": "Documentation work",     "done": False, "priority": "Low",    "cat": "Work",
+             "note": "",            "due": ""},
+            {"title": "Exercise 30 min",        "done": False, "priority": "Medium", "cat": "Health",
+             "note": "Incl. stretch", "due": "2025-04-14"},
+            {"title": "Read 20 pages",          "done": False, "priority": "Low",    "cat": "Study",
+             "note": "",            "due": ""},
         ]
-        self.filter_cat = "전체"
+        self.filter_cat = "All"
         self.new_text = ft.TextField(
-            hint_text="새 할 일을 입력하세요...",
+            hint_text="Enter a new task...",
             bgcolor=BG_CARD,
             border_color=BORDER,
             focused_border_color=ACCENT,
@@ -68,10 +68,10 @@ class TodoView:
             delta = (due - today).days
             if delta < 0:
                 color = DANGER
-                label = f"D+{-delta} 지남"
+                label = f"D+{-delta} overdue"
             elif delta == 0:
                 color = WARNING
-                label = "오늘 마감"
+                label = "Due today"
             elif delta <= 3:
                 color = WARNING
                 label = f"D-{delta}"
@@ -106,7 +106,6 @@ class TodoView:
             task["priority"] = opts[(cur + 1) % len(opts)]
             self._refresh()
 
-        # 마감일 표시
         due_chip = self._due_label(task.get("due", ""))
         chips = [
             ft.Container(
@@ -122,8 +121,8 @@ class TodoView:
                 bgcolor=pcolor + "18",
                 border_radius=4,
                 padding=ft.padding.only(left=6, top=2, right=6, bottom=2),
-                on_click=change_priority,  # 클릭으로 우선순위 순환
-                tooltip="클릭해서 우선순위 변경",
+                on_click=change_priority,
+                tooltip="Click to change priority",
             ),
         ]
         if due_chip:
@@ -170,7 +169,7 @@ class TodoView:
                         content=ft.Icon(ft.Icons.DELETE, size=16, color=TEXT_MUT),
                         on_click=delete,
                         padding=4,
-                        tooltip="삭제",
+                        tooltip="Delete",
                     ),
                 ],
                 spacing=12,
@@ -187,7 +186,7 @@ class TodoView:
     def _refresh(self):
         if self.task_col_ref.current:
             tasks = [t for t in self.tasks
-                     if self.filter_cat == "전체" or t["cat"] == self.filter_cat]
+                     if self.filter_cat == "All" or t["cat"] == self.filter_cat]
             self.task_col_ref.current.controls = [
                 self._task_tile(t, self.tasks.index(t)) for t in tasks
             ]
@@ -199,14 +198,14 @@ class TodoView:
             return
         self.tasks.append({
             "title": text, "done": False,
-            "priority": "보통", "cat": "업무", "note": "", "due": "",
+            "priority": "Medium", "cat": "Work", "note": "", "due": "",
         })
         self.new_text.value = ""
         self._refresh()
 
     def _filter_btn(self, label: str) -> ft.Container:
         is_active = self.filter_cat == label
-        color = CATEGORY_COLORS.get(label, ACCENT) if label != "전체" else ACCENT
+        color = CATEGORY_COLORS.get(label, ACCENT) if label != "All" else ACCENT
 
         def on_click(_):
             self.filter_cat = label
@@ -233,7 +232,7 @@ class TodoView:
                     controls=[
                         ft.Text(str(total_count), size=26, weight=ft.FontWeight.W_400,
                                 color=TEXT_PRI, font_family="DOSSaemmul"),
-                        ft.Text("전체", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
+                        ft.Text("Total", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
@@ -241,7 +240,7 @@ class TodoView:
                     controls=[
                         ft.Text(str(done_count), size=26, weight=ft.FontWeight.W_400,
                                 color=ACCENT, font_family="DOSSaemmul"),
-                        ft.Text("완료", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
+                        ft.Text("Done", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
@@ -250,7 +249,7 @@ class TodoView:
                         ft.Text(str(total_count - done_count), size=26,
                                 weight=ft.FontWeight.W_400, color=DANGER,
                                 font_family="DOSSaemmul"),
-                        ft.Text("남음", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
+                        ft.Text("Remaining", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
@@ -260,7 +259,7 @@ class TodoView:
                         ft.Text(f"{int(done_count / total_count * 100) if total_count else 0}%",
                                 size=26, weight=ft.FontWeight.W_400,
                                 color=PURPLE, font_family="DOSSaemmul"),
-                        ft.Text("달성률", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
+                        ft.Text("Completion", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
@@ -273,7 +272,7 @@ class TodoView:
             color=ACCENT, bgcolor=BORDER, height=6, border_radius=3,
         )
 
-        cats = ["전체", "업무", "개인", "건강", "학습"]
+        cats = ["All", "Work", "Personal", "Health", "Study"]
         filter_row = ft.Row(controls=[self._filter_btn(c) for c in cats], spacing=8)
 
         add_row = ft.Row(
@@ -294,10 +293,9 @@ class TodoView:
         )
 
         tasks_to_show = [t for t in self.tasks
-                         if self.filter_cat == "전체" or t["cat"] == self.filter_cat]
+                         if self.filter_cat == "All" or t["cat"] == self.filter_cat]
 
-        # 우선순위 정렬: 높음 → 보통 → 낮음, 완료 항목은 뒤로
-        order = {"높음": 0, "보통": 1, "낮음": 2}
+        order = {"High": 0, "Medium": 1, "Low": 2}
         tasks_to_show = sorted(tasks_to_show,
                                key=lambda t: (t["done"], order.get(t["priority"], 1)))
 
@@ -311,9 +309,9 @@ class TodoView:
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text("할 일 메모", size=26, weight=ft.FontWeight.W_400,
+                    ft.Text("To-Do", size=26, weight=ft.FontWeight.W_400,
                             color=TEXT_PRI, font_family="DOSSaemmul"),
-                    ft.Text("오늘 할 일을 관리해보세요",
+                    ft.Text("Manage your tasks for today",
                             size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
                     ft.Container(height=14),
                     card(

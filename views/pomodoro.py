@@ -8,9 +8,8 @@ from components.ui import card, mascot_widget
 
 
 def _notify(title: str, message: str):
-    """OS 알림 (플랫폼별 최적 방식)"""
+    """OS notification (platform-specific best method)"""
     if sys.platform == "darwin":
-        # macOS: 네이티브 알림센터
         try:
             script = (
                 f'display notification "{message}" '
@@ -21,15 +20,13 @@ def _notify(title: str, message: str):
         except Exception:
             pass
     elif sys.platform == "win32":
-        # Windows: 별도 프로세스로 tkinter 팝업 → Tcl_AsyncDelete 방지
         _notify_subprocess(title, message)
     else:
-        # Linux: 스레드로 tkinter 팝업
         threading.Thread(target=_notify_tkinter, args=(title, message), daemon=True).start()
 
 
 def _notify_subprocess(title: str, message: str):
-    """Windows 전용 — subprocess로 tkinter 팝업 실행"""
+    """Windows only — run tkinter popup via subprocess"""
     try:
         script = r"""
 import sys
@@ -93,14 +90,14 @@ root.mainloop()
 """
         subprocess.Popen(
             [sys.executable, "-c", script, title, message],
-            creationflags=0x08000000,  # CREATE_NO_WINDOW
+            creationflags=0x08000000,
         )
     except Exception:
         pass
 
 
 def _notify_tkinter(title: str, message: str):
-    """macOS / Linux 전용 — 스레드에서 tkinter 팝업 실행"""
+    """macOS / Linux — run tkinter popup in thread"""
     try:
         import tkinter as tk
 
@@ -173,8 +170,8 @@ TEXT_SEC  = "#5A6375"
 TEXT_MUT  = "#9DA8B7"
 BORDER    = "#E2E6EC"
 
-MODE_COLORS  = {"focus": ACCENT,  "rest": PURPLE}
-MODE_LABELS  = {"focus": "집중",   "rest": "휴식"}
+MODE_COLORS  = {"focus": ACCENT,   "rest": PURPLE}
+MODE_LABELS  = {"focus": "Focus",  "rest": "Break"}
 
 
 def _beep(freq: int = 880, duration: float = 0.3, times: int = 2):
@@ -225,12 +222,12 @@ class PomodoroView:
         self.remaining = 25 * 60
         self.total     = 25 * 60
         self._thread   = None
-        self.sessions_done = 0   # 완료된 집중 세션 수
-        self.cycle_count   = 4   # 목표 사이클 수
+        self.sessions_done = 0
+        self.cycle_count   = 4
         self.auto_start = False
         self.sound_on   = True
         self.history = []
-        self.session_start_str = ""  # 세션 시작 시각 기록용
+        self.session_start_str = ""
 
         self.time_ref        = ft.Ref()
         self.ring_ref        = ft.Ref()
@@ -240,7 +237,7 @@ class PomodoroView:
         self.history_col_ref = ft.Ref()
         self.tab_refs        = {"focus": ft.Ref(), "rest": ft.Ref()}
         self.tab_text_refs   = {"focus": ft.Ref(), "rest": ft.Ref()}
-        self.on_tick = None   # DashboardView.update_pomodoro 콜백 연결용
+        self.on_tick = None
 
         self.test_mode        = False
         self.focus_label_ref  = ft.Ref()
@@ -250,11 +247,9 @@ class PomodoroView:
         self.session_dots_ref = ft.Ref()
         self.test_btn_ref     = ft.Ref()
 
-    # ── helpers ──────────────────────────────────────────────────────────
     def _fmt(self, secs: int) -> str:
         return f"{secs // 60:02d}:{secs % 60:02d}"
 
-    # ── mode switching ───────────────────────────────────────────────────
     def _set_mode(self, mode: str, e=None):
         self.mode = mode
         if self.test_mode:
@@ -266,11 +261,9 @@ class PomodoroView:
         self.total = secs
         self.running = False
         self.paused  = False
-        # reset play icon
         if self.play_icon_ref.current:
             self.play_icon_ref.current.icon = ft.Icons.PLAY_ARROW
             self.play_icon_ref.current.update()
-        # update play button color
         if self.play_btn_ref.current:
             self.play_btn_ref.current.bgcolor = MODE_COLORS[mode]
             self.play_btn_ref.current.update()
@@ -288,7 +281,6 @@ class PomodoroView:
                 self.tab_text_refs[m].current.color = MODE_COLORS[m] if is_active else TEXT_MUT
                 self.tab_text_refs[m].current.update()
 
-    # ── playback control ─────────────────────────────────────────────────
     def _fire_tick(self):
         if self.on_tick:
             try:
@@ -300,7 +292,6 @@ class PomodoroView:
         if not self.running:
             self.running = True
             self.paused  = False
-            # 처음 시작할 때만 시작 시각 기록 (일시정지 후 재개는 덮어쓰지 않음)
             if not self.paused or not self.session_start_str:
                 self.session_start_str = time.strftime("%H:%M")
             if self.play_icon_ref.current:
@@ -317,7 +308,6 @@ class PomodoroView:
             self._fire_tick()
 
     def _skip_next(self, e):
-        """현재 세션을 건너뛰고 다음 세션으로 이동"""
         self.running = False
         self.paused  = False
         next_mode = "rest" if self.mode == "focus" else "focus"
@@ -338,7 +328,6 @@ class PomodoroView:
             self.play_icon_ref.current.update()
         self._update_display()
 
-    # ── tick (async, wall-clock based → no drift, real-time UI update) ──
     async def _tick_async(self):
         start_wall      = time.time()
         start_remaining = self.remaining
@@ -361,39 +350,35 @@ class PomodoroView:
                 threading.Thread(target=_beep, args=(880, 0.25, 3), daemon=True).start()
             self._on_complete()
 
-    # ── session completion ───────────────────────────────────────────────
     def _on_complete(self):
         now_str = time.strftime("%H:%M")
         start_str = self.session_start_str or "—"
-        self.history.append((MODE_LABELS[self.mode], start_str, now_str, "완료"))
+        self.history.append((MODE_LABELS[self.mode], start_str, now_str, "Done"))
         self._update_history()
 
-        # 집중 세션 완료 시에만 카운트
         if self.mode == "focus":
             self.sessions_done += 1
             self._update_dots()
 
-        # 목표 사이클 달성 확인
         if self.mode == "focus" and self.sessions_done >= self.cycle_count:
             threading.Thread(
                 target=_notify,
-                args=("FocusMate ✅", f"{self.cycle_count}회 사이클 목표 달성! 오늘도 수고하셨어요."),
+                args=("FocusMate ✅", f"Goal achieved! {self.cycle_count} cycles complete. Great work!"),
                 daemon=True,
             ).start()
             self._show_all_done_dialog()
             return
 
-        # 세션 전환 OS 알림
         if self.mode == "focus":
             threading.Thread(
                 target=_notify,
-                args=("FocusMate 💪", "집중 세션 완료! 휴식 시간이에요."),
+                args=("FocusMate 💪", "Focus session complete! Time for a break."),
                 daemon=True,
             ).start()
         else:
             threading.Thread(
                 target=_notify,
-                args=("FocusMate ⏰", "휴식 종료! 다음 집중 세션을 시작할게요."),
+                args=("FocusMate ⏰", "Break over! Starting next focus session."),
                 daemon=True,
             ).start()
 
@@ -401,7 +386,6 @@ class PomodoroView:
         next_label = MODE_LABELS[next_mode]
 
         if self.mode == "focus":
-            # 집중 → 휴식: 항상 자동 전환
             self._set_mode(next_mode)
             self.session_start_str = time.strftime("%H:%M")
             self.running = True
@@ -411,7 +395,6 @@ class PomodoroView:
                 self.play_icon_ref.current.update()
             self.page.run_task(self._tick_async)
         elif self.auto_start:
-            # 휴식 → 집중: 자동 전환 켜져 있을 때만
             self._set_mode(next_mode)
             self.session_start_str = time.strftime("%H:%M")
             self.running = True
@@ -421,7 +404,6 @@ class PomodoroView:
                 self.play_icon_ref.current.update()
             self.page.run_task(self._tick_async)
         else:
-            # 휴식 → 집중: 다이얼로그
             self._show_done_dialog(next_label, next_mode)
 
     def _show_all_done_dialog(self):
@@ -439,10 +421,10 @@ class PomodoroView:
                 content=ft.Column(
                     controls=[
                         mascot_widget(56),
-                        ft.Text("목표 달성! 🎉", size=18, weight=ft.FontWeight.W_400,
+                        ft.Text("Goal Achieved! 🎉", size=18, weight=ft.FontWeight.W_400,
                                 color=ACCENT, font_family="DOSSaemmul",
                                 text_align=ft.TextAlign.CENTER),
-                        ft.Text(f"{self.cycle_count}회 사이클을 완료했어요!",
+                        ft.Text(f"{self.cycle_count} cycles completed!",
                                 size=13, color=TEXT_SEC, font_family="DOSSaemmul",
                                 text_align=ft.TextAlign.CENTER),
                     ],
@@ -452,7 +434,7 @@ class PomodoroView:
                 padding=ft.padding.only(left=20, top=16, right=20, bottom=8),
             ),
             actions=[
-                ft.TextButton("다시 시작", style=ft.ButtonStyle(color=ACCENT),
+                ft.TextButton("Start Again", style=ft.ButtonStyle(color=ACCENT),
                               on_click=restart),
             ],
         )
@@ -475,10 +457,10 @@ class PomodoroView:
                 content=ft.Column(
                     controls=[
                         mascot_widget(56),
-                        ft.Text("세션 완료! 🎉", size=18, weight=ft.FontWeight.W_400,
+                        ft.Text("Session Complete! 🎉", size=18, weight=ft.FontWeight.W_400,
                                 color=ACCENT, font_family="DOSSaemmul",
                                 text_align=ft.TextAlign.CENTER),
-                        ft.Text(f"다음: {next_label} 세션",
+                        ft.Text(f"Next: {next_label} session",
                                 size=13, color=TEXT_SEC, font_family="DOSSaemmul",
                                 text_align=ft.TextAlign.CENTER),
                     ],
@@ -488,7 +470,7 @@ class PomodoroView:
                 padding=ft.padding.only(left=20, top=16, right=20, bottom=8),
             ),
             actions=[
-                ft.TextButton("다음 세션 시작", style=ft.ButtonStyle(color=ACCENT),
+                ft.TextButton("Start Next Session", style=ft.ButtonStyle(color=ACCENT),
                               on_click=go_next),
             ],
         )
@@ -498,7 +480,6 @@ class PomodoroView:
         except Exception:
             pass
 
-    # ── display update ───────────────────────────────────────────────────
     def _update_display(self):
         try:
             if self.time_ref.current:
@@ -519,7 +500,6 @@ class PomodoroView:
             except Exception:
                 pass
 
-    # ── dots & history ───────────────────────────────────────────────────
     def _dot_controls(self) -> list:
         dots = []
         for i in range(self.cycle_count):
@@ -538,13 +518,13 @@ class PomodoroView:
             self.session_dots_ref.current.controls = self._dot_controls()
             self.session_dots_ref.current.update()
         if self.cycle_text_ref.current:
-            self.cycle_text_ref.current.value = f"집중 진행 ({self.sessions_done}/{self.cycle_count}회)"
+            self.cycle_text_ref.current.value = f"Focus Progress ({self.sessions_done}/{self.cycle_count})"
             self.cycle_text_ref.current.update()
 
     def _update_history(self):
         if self.history_col_ref.current:
             self.history_col_ref.current.controls = [
-                ft.Text("오늘의 기록", size=14, weight=ft.FontWeight.W_400,
+                ft.Text("Today's Log", size=14, weight=ft.FontWeight.W_400,
                         color=TEXT_PRI, font_family="DOSSaemmul"),
                 ft.Container(height=10),
                 *self._history_rows(),
@@ -557,7 +537,7 @@ class PomodoroView:
     def _history_rows(self) -> list:
         rows = []
         for mode_l, start, end, _ in self.history[-5:]:
-            color = ACCENT if mode_l == "집중" else PURPLE
+            color = ACCENT if mode_l == "Focus" else PURPLE
             rows.append(ft.Container(
                 content=ft.Row(
                     controls=[
@@ -567,7 +547,7 @@ class PomodoroView:
                         ft.Text(f"{start} → {end}", size=11, color=TEXT_MUT,
                                 font_family="DOSSaemmul"),
                         ft.Container(
-                            content=ft.Text("완료", size=10, color=ACCENT,
+                            content=ft.Text("Done", size=10, color=ACCENT,
                                             font_family="DOSSaemmul"),
                             bgcolor=ACCENT_LT, border_radius=6,
                             padding=ft.padding.only(left=8, top=3, right=8, bottom=3),
@@ -582,7 +562,6 @@ class PomodoroView:
             ))
         return rows
 
-    # ── build ────────────────────────────────────────────────────────────
     def build(self) -> ft.Container:
 
         def _mode_tab(mode: str) -> ft.Container:
@@ -606,7 +585,6 @@ class PomodoroView:
         timer_area = card(
             ft.Column(
                 controls=[
-                    # 탭
                     ft.Container(
                         content=ft.Row(
                             controls=[_mode_tab("focus"), _mode_tab("rest")],
@@ -617,7 +595,6 @@ class PomodoroView:
                         padding=6, border=ft.border.all(1, BORDER),
                     ),
                     ft.Container(height=24),
-                    # 링 타이머
                     ft.Container(
                         width=200, height=200,
                         alignment=ft.Alignment(0, 0),
@@ -663,13 +640,12 @@ class PomodoroView:
                     ),
                     ft.Text(
                         ref=self.cycle_text_ref,
-                        value=f"집중 진행 ({self.sessions_done}/{self.cycle_count}회)",
+                        value=f"Focus Progress ({self.sessions_done}/{self.cycle_count})",
                         size=11, color=TEXT_MUT,
                         font_family="DOSSaemmul",
                         text_align=ft.TextAlign.CENTER,
                     ),
                     ft.Container(height=20),
-                    # 버튼 행
                     ft.Row(
                         controls=[
                             ft.Container(
@@ -701,7 +677,7 @@ class PomodoroView:
                                 border=ft.border.all(1.5, BORDER),
                                 alignment=ft.Alignment(0, 0),
                                 on_click=self._skip_next,
-                                tooltip="다음 세션으로",
+                                tooltip="Skip to next session",
                             ),
                         ],
                         alignment=ft.MainAxisAlignment.CENTER,
@@ -715,11 +691,11 @@ class PomodoroView:
             padding=28,
         )
 
-        # ── 설정 ─────────────────────────────────────────────────────────
+        # ── Settings ──────────────────────────────────────────────────
         def on_focus_change(e):
             self.focus_minutes = int(round(e.control.value / 5) * 5)
             if self.focus_label_ref.current:
-                self.focus_label_ref.current.value = f"집중 시간  {self.focus_minutes}분"
+                self.focus_label_ref.current.value = f"Focus Time  {self.focus_minutes}min"
                 self.focus_label_ref.current.update()
             if self.mode == "focus" and not self.running:
                 self.remaining = self.focus_minutes * 60
@@ -729,7 +705,7 @@ class PomodoroView:
         def on_rest_change(e):
             self.rest_minutes = int(round(e.control.value / 5) * 5)
             if self.rest_label_ref.current:
-                self.rest_label_ref.current.value = f"휴식 시간  {self.rest_minutes}분"
+                self.rest_label_ref.current.value = f"Break Time  {self.rest_minutes}min"
                 self.rest_label_ref.current.update()
             if self.mode == "rest" and not self.running:
                 self.remaining = self.rest_minutes * 60
@@ -739,9 +715,8 @@ class PomodoroView:
         def on_cycle_change(e):
             self.cycle_count = int(round(e.control.value))
             if self.cycle_label_ref.current:
-                self.cycle_label_ref.current.value = f"목표 사이클  {self.cycle_count}회"
+                self.cycle_label_ref.current.value = f"Goal Cycles  {self.cycle_count}"
                 self.cycle_label_ref.current.update()
-            # 이미 완료한 세션이 새 목표보다 많으면 리셋
             if self.sessions_done > self.cycle_count:
                 self.sessions_done = 0
             self._update_dots()
@@ -752,14 +727,11 @@ class PomodoroView:
             self.paused    = False
 
             if self.test_mode:
-                # 원래 설정 저장 후 테스트 값으로 교체
                 self._saved_cycle_count = self.cycle_count
                 self.cycle_count = 2
             else:
-                # 원래 설정 복원
                 self.cycle_count = getattr(self, "_saved_cycle_count", self.cycle_count)
 
-            # 세션 카운트 리셋
             self.sessions_done = 0
             self._update_dots()
 
@@ -767,11 +739,10 @@ class PomodoroView:
                 self.test_btn_ref.current.bgcolor = DANGER if self.test_mode else BG_CARD2
                 self.test_btn_ref.current.border  = ft.border.all(1.5, DANGER if self.test_mode else BORDER)
                 lbl: ft.Text = self.test_btn_ref.current.content
-                lbl.value = "🧪 테스트 모드 ON  (10초 × 2회)" if self.test_mode else "🧪 테스트 모드"
+                lbl.value = "🧪 Test Mode ON  (10s × 2)" if self.test_mode else "🧪 Test Mode"
                 lbl.color = "#FFFFFF" if self.test_mode else TEXT_MUT
                 self.test_btn_ref.current.update()
 
-            # 현재 세션 즉시 리셋
             secs = 10 if self.test_mode else (
                 self.focus_minutes if self.mode == "focus" else self.rest_minutes) * 60
             self.remaining = secs
@@ -790,13 +761,12 @@ class PomodoroView:
         settings = card(
             ft.Column(
                 controls=[
-                    ft.Text("설정", size=14, weight=ft.FontWeight.W_400,
+                    ft.Text("Settings", size=14, weight=ft.FontWeight.W_400,
                             color=TEXT_PRI, font_family="DOSSaemmul"),
                     ft.Container(height=8),
-                    # 집중 시간 슬라이더
                     ft.Column(controls=[
                         ft.Text(ref=self.focus_label_ref,
-                                value=f"집중 시간  {self.focus_minutes}분",
+                                value=f"Focus Time  {self.focus_minutes}min",
                                 size=12, color=TEXT_SEC, font_family="DOSSaemmul"),
                         ft.Slider(
                             min=5, max=60, value=self.focus_minutes,
@@ -805,10 +775,9 @@ class PomodoroView:
                             on_change=on_focus_change,
                         ),
                     ], spacing=2),
-                    # 휴식 시간 슬라이더
                     ft.Column(controls=[
                         ft.Text(ref=self.rest_label_ref,
-                                value=f"휴식 시간  {self.rest_minutes}분",
+                                value=f"Break Time  {self.rest_minutes}min",
                                 size=12, color=TEXT_SEC, font_family="DOSSaemmul"),
                         ft.Slider(
                             min=5, max=30, value=self.rest_minutes,
@@ -817,10 +786,9 @@ class PomodoroView:
                             on_change=on_rest_change,
                         ),
                     ], spacing=2),
-                    # 목표 사이클 슬라이더
                     ft.Column(controls=[
                         ft.Text(ref=self.cycle_label_ref,
-                                value=f"목표 사이클  {self.cycle_count}회",
+                                value=f"Goal Cycles  {self.cycle_count}",
                                 size=12, color=TEXT_SEC, font_family="DOSSaemmul"),
                         ft.Slider(
                             min=1, max=8, value=self.cycle_count,
@@ -832,10 +800,9 @@ class PomodoroView:
                     ft.Container(height=4),
                     ft.Divider(color=BORDER, height=1),
                     ft.Container(height=4),
-                    # 테스트 모드 버튼
                     ft.Container(
                         ref=self.test_btn_ref,
-                        content=ft.Text("🧪 테스트 모드", size=12,
+                        content=ft.Text("🧪 Test Mode", size=12,
                                         color=TEXT_MUT, font_family="DOSSaemmul",
                                         text_align=ft.TextAlign.CENTER),
                         bgcolor=BG_CARD2,
@@ -844,19 +811,19 @@ class PomodoroView:
                         padding=ft.padding.symmetric(vertical=8),
                         alignment=ft.Alignment(0, 0),
                         on_click=toggle_test_mode,
-                        tooltip="집중/휴식을 각 10초로 설정",
+                        tooltip="Set focus/break to 10s each",
                         expand=True,
                     ),
                     ft.Divider(color=BORDER, height=1),
                     ft.Container(height=4),
                     ft.Row(controls=[
-                        ft.Text("알림음", size=12, color=TEXT_SEC,
+                        ft.Text("Sound Alerts", size=12, color=TEXT_SEC,
                                 font_family="DOSSaemmul", expand=True),
                         ft.Switch(value=True, active_color=ACCENT, scale=0.8,
                                   on_change=toggle_sound),
                     ]),
                     ft.Row(controls=[
-                        ft.Text("자동 전환", size=12, color=TEXT_SEC,
+                        ft.Text("Auto Start", size=12, color=TEXT_SEC,
                                 font_family="DOSSaemmul", expand=True),
                         ft.Switch(value=False, active_color=ACCENT, scale=0.8,
                                   on_change=toggle_auto),
@@ -871,7 +838,7 @@ class PomodoroView:
             ft.Column(
                 ref=self.history_col_ref,
                 controls=[
-                    ft.Text("오늘의 기록", size=14, weight=ft.FontWeight.W_400,
+                    ft.Text("Today's Log", size=14, weight=ft.FontWeight.W_400,
                             color=TEXT_PRI, font_family="DOSSaemmul"),
                     ft.Container(height=10),
                     *self._history_rows(),
@@ -892,9 +859,9 @@ class PomodoroView:
                     ft.Row(controls=[
                         ft.Column(
                             controls=[
-                                ft.Text("뽀모도로 타이머", size=26, weight=ft.FontWeight.W_400,
+                                ft.Text("Pomodoro Timer", size=26, weight=ft.FontWeight.W_400,
                                         color=TEXT_PRI, font_family="DOSSaemmul"),
-                                ft.Text("집중과 휴식의 리듬을 만들어보세요",
+                                ft.Text("Build a rhythm of focus and rest",
                                         size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
                             ],
                             spacing=2, expand=True,

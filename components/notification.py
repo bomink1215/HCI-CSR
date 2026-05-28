@@ -14,7 +14,7 @@ class PostureAlert:
     def show(self):
         score = self.score
         color = ACCENT2 if score < 50 else "#FFA500"
-        msg = "거북목 위험! 지금 바로 자세를 교정해주세요." if score < 50 else "자세가 약간 흐트러졌어요. 등을 펴주세요."
+        msg = "Turtle neck risk! Please correct your posture now." if score < 50 else "Your posture is slightly off. Straighten your back."
         emoji = "🚨" if score < 50 else "⚠️"
 
         def close(_):
@@ -29,15 +29,15 @@ class PostureAlert:
                 content=ft.Column(
                     controls=[
                         ft.Text(emoji, size=40),
-                        ft.Text("자세 경고", size=18, weight=ft.FontWeight.W_800,
-                                color=color, font_family="Pretendard"),
+                        ft.Text("Posture Alert", size=18, weight=ft.FontWeight.W_800,
+                                color=color, font_family="DOSSaemmul"),
                         ft.Text(msg, size=13, color="#A0AEC0",
-                                text_align=ft.TextAlign.CENTER, font_family="Pretendard"),
+                                text_align=ft.TextAlign.CENTER, font_family="DOSSaemmul"),
                         ft.Container(height=4),
                         ft.Row(
                             controls=[
-                                ft.Text("자세 점수", size=12, color="#4A5568"),
-                                ft.Text(f"{score}점", size=14, weight=ft.FontWeight.W_700,
+                                ft.Text("Posture Score", size=12, color="#4A5568"),
+                                ft.Text(f"{score}pts", size=14, weight=ft.FontWeight.W_700,
                                         color=color),
                             ],
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -54,12 +54,12 @@ class PostureAlert:
             ),
             actions=[
                 ft.TextButton(
-                    "교정하러 가기",
+                    "Fix Posture",
                     style=ft.ButtonStyle(color=ACCENT),
                     on_click=close,
                 ),
                 ft.TextButton(
-                    "5분 후 알림",
+                    "Remind in 5 min",
                     style=ft.ButtonStyle(color="#4A5568"),
                     on_click=close,
                 ),

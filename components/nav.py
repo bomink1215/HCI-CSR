@@ -15,11 +15,11 @@ class NavBar:
         self.active = "dashboard"
         self.buttons: dict[str, ft.Container] = {}
         self.items = [
-            ("dashboard", ft.Icons.DASHBOARD,      "대시보드"),
-            ("posture",   ft.Icons.ACCESSIBILITY,  "자세"),
-            ("pomodoro",  ft.Icons.TIMER,          "타이머"),
-            ("todo",      ft.Icons.CHECKLIST,      "할 일"),
-            ("ranking",   ft.Icons.LEADERBOARD,    "랭킹"),
+            ("dashboard", ft.Icons.DASHBOARD,      "Dashboard"),
+            ("posture",   ft.Icons.ACCESSIBILITY,  "Posture"),
+            ("pomodoro",  ft.Icons.TIMER,          "Timer"),
+            ("todo",      ft.Icons.CHECKLIST,      "To-Do"),
+            ("ranking",   ft.Icons.LEADERBOARD,    "Ranking"),
         ]
 
     def _nav_btn(self, key: str, icon: str, label: str) -> ft.Container:
@@ -130,7 +130,7 @@ class NavBar:
             content=ft.Column(
                 controls=[
                     ft.Icon(ft.Icons.SETTINGS, size=20, color=TEXT_MUT),
-                    ft.Text("설정", size=10, color=TEXT_MUT, font_family="DOSSaemmul"),
+                    ft.Text("Settings", size=10, color=TEXT_MUT, font_family="DOSSaemmul"),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=2,

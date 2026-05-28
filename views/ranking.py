@@ -15,16 +15,15 @@ TEXT_SEC  = "#5A6375"
 TEXT_MUT  = "#9DA8B7"
 BORDER    = "#E2E6EC"
 
-# ── 로컬 JSON 데이터 구조 ───────────────────────────────────────
 DATA_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "friends.json")
 
 DEFAULT_FRIENDS = [
-    {"name": "김철수",    "sessions": 18, "focus_min": 272, "streak": 12, "score": 97,  "posture_avg": 91, "avatar": "#00C9A7", "me": False},
-    {"name": "이영희",    "sessions": 16, "focus_min": 235, "streak": 9,  "score": 89,  "posture_avg": 85, "avatar": "#9B8FFF", "me": False},
-    {"name": "나 (박지수)", "sessions": 14, "focus_min": 200, "streak": 5, "score": 82, "posture_avg": 78, "avatar": "#FF5C5C", "me": True},
-    {"name": "최민준",    "sessions": 12, "focus_min": 170, "streak": 3,  "score": 75,  "posture_avg": 72, "avatar": "#FFB347", "me": False},
-    {"name": "한소희",    "sessions": 10, "focus_min": 130, "streak": 7,  "score": 68,  "posture_avg": 88, "avatar": "#34D399", "me": False},
-    {"name": "정우성",    "sessions": 8,  "focus_min": 105, "streak": 2,  "score": 55,  "posture_avg": 60, "avatar": "#60A5FA", "me": False},
+    {"name": "Chulsoo K.",  "sessions": 18, "focus_min": 272, "streak": 12, "score": 97,  "posture_avg": 91, "avatar": "#00C9A7", "me": False},
+    {"name": "Younghee L.", "sessions": 16, "focus_min": 235, "streak": 9,  "score": 89,  "posture_avg": 85, "avatar": "#9B8FFF", "me": False},
+    {"name": "Me (Jisoo P.)", "sessions": 14, "focus_min": 200, "streak": 5, "score": 82, "posture_avg": 78, "avatar": "#FF5C5C", "me": True},
+    {"name": "Minjun C.",   "sessions": 12, "focus_min": 170, "streak": 3,  "score": 75,  "posture_avg": 72, "avatar": "#FFB347", "me": False},
+    {"name": "Sohee H.",    "sessions": 10, "focus_min": 130, "streak": 7,  "score": 68,  "posture_avg": 88, "avatar": "#34D399", "me": False},
+    {"name": "Woosung J.",  "sessions": 8,  "focus_min": 105, "streak": 2,  "score": 55,  "posture_avg": 60, "avatar": "#60A5FA", "me": False},
 ]
 
 MEDALS = ["🥇", "🥈", "🥉"]
@@ -46,7 +45,6 @@ def _load_friends() -> list:
                 return json.load(f)
     except Exception:
         pass
-    # 없으면 기본값 저장
     _save_friends(DEFAULT_FRIENDS)
     return DEFAULT_FRIENDS
 
@@ -61,7 +59,7 @@ def _save_friends(friends: list):
 
 
 def add_focus_session(minutes: int = 25):
-    """뽀모도로 완료 시 호출 → 내 데이터에 세션 추가"""
+    """Call on pomodoro complete → add session to my data"""
     friends = _load_friends()
     for f in friends:
         if f.get("me"):
@@ -69,7 +67,6 @@ def add_focus_session(minutes: int = 25):
             f["focus_min"] = f.get("focus_min", 0) + minutes
             f["score"] = min(100, f.get("score", 0) + 2)
             break
-    # 점수 기준 재정렬
     friends.sort(key=lambda x: x["score"], reverse=True)
     _save_friends(friends)
 
@@ -78,14 +75,14 @@ class RankingView:
     def __init__(self, page: ft.Page):
         self.page = page
         self.friends = _load_friends()
-        self.period = "오늘"
+        self.period = "Today"
 
     def _reload(self):
         self.friends = _load_friends()
 
     def _podium(self) -> ft.Row:
         top3 = self.friends[:3]
-        visual_order = [1, 0, 2]  # 2등, 1등, 3등 시각 순서
+        visual_order = [1, 0, 2]
         heights = [70, 100, 50]
         rank_colors = [PURPLE, ACCENT, DANGER]
 
@@ -183,7 +180,7 @@ class RankingView:
                                                     weight=ft.FontWeight.W_400),
                                             *(
                                                 [ft.Container(
-                                                    content=ft.Text("나", size=9, color="#FFFFFF",
+                                                    content=ft.Text("Me", size=9, color="#FFFFFF",
                                                                     font_family="DOSSaemmul"),
                                                     bgcolor=ACCENT, border_radius=4,
                                                     padding=ft.padding.only(left=5, top=1, right=5, bottom=1),
@@ -195,9 +192,9 @@ class RankingView:
                                     ),
                                     ft.Row(
                                         controls=[
-                                            ft.Text(f"🔥 {friend['streak']}일", size=11,
+                                            ft.Text(f"🔥 {friend['streak']}d streak", size=11,
                                                     color=TEXT_MUT, font_family="DOSSaemmul"),
-                                            ft.Text(f"세션 {friend['sessions']}회", size=11,
+                                            ft.Text(f"{friend['sessions']} sessions", size=11,
                                                     color=TEXT_MUT, font_family="DOSSaemmul"),
                                         ],
                                         spacing=10,
@@ -206,7 +203,6 @@ class RankingView:
                                 spacing=2,
                                 expand=True,
                             ),
-                            # 집중시간 + 자세점수 나란히
                             ft.Row(
                                 controls=[
                                     ft.Column(
@@ -215,7 +211,7 @@ class RankingView:
                                                     color=ACCENT if is_me else TEXT_PRI,
                                                     font_family="DOSSaemmul",
                                                     weight=ft.FontWeight.W_400),
-                                            ft.Text("집중", size=10, color=TEXT_MUT,
+                                            ft.Text("Focus", size=10, color=TEXT_MUT,
                                                     font_family="DOSSaemmul"),
                                         ],
                                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -224,11 +220,11 @@ class RankingView:
                                     ft.Container(width=1, height=28, bgcolor=BORDER),
                                     ft.Column(
                                         controls=[
-                                            ft.Text(f"{posture_avg}점", size=12,
+                                            ft.Text(f"{posture_avg}pts", size=12,
                                                     color=posture_color,
                                                     font_family="DOSSaemmul",
                                                     weight=ft.FontWeight.W_400),
-                                            ft.Text("자세", size=10, color=TEXT_MUT,
+                                            ft.Text("Posture", size=10, color=TEXT_MUT,
                                                     font_family="DOSSaemmul"),
                                         ],
                                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -242,14 +238,13 @@ class RankingView:
                         spacing=10,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
-                    # 집중 + 자세 이중 바
                     ft.Column(
                         controls=[
                             ft.Row(
                                 controls=[
                                     ft.Container(width=34),
-                                    ft.Text("집중", size=9, color=TEXT_MUT,
-                                            font_family="DOSSaemmul", width=22),
+                                    ft.Text("Focus", size=9, color=TEXT_MUT,
+                                            font_family="DOSSaemmul", width=30),
                                     ft.Container(
                                         content=ft.ProgressBar(
                                             value=focus_pct,
@@ -265,8 +260,8 @@ class RankingView:
                             ft.Row(
                                 controls=[
                                     ft.Container(width=34),
-                                    ft.Text("자세", size=9, color=TEXT_MUT,
-                                            font_family="DOSSaemmul", width=22),
+                                    ft.Text("Posture", size=9, color=TEXT_MUT,
+                                            font_family="DOSSaemmul", width=30),
                                     ft.Container(
                                         content=ft.ProgressBar(
                                             value=posture_pct,
@@ -316,7 +311,7 @@ class RankingView:
                         controls=[
                             ft.Text(my_data["name"], size=15, weight=ft.FontWeight.W_400,
                                     color=TEXT_PRI, font_family="DOSSaemmul"),
-                            ft.Text(f"현재 #{my_rank}위", size=13, color=ACCENT,
+                            ft.Text(f"Currently #{my_rank}", size=13, color=ACCENT,
                                     font_family="DOSSaemmul"),
                         ],
                         spacing=4,
@@ -327,7 +322,7 @@ class RankingView:
                             ft.Text(_fmt_min(my_data["focus_min"]), size=20,
                                     weight=ft.FontWeight.W_400,
                                     color=ACCENT, font_family="DOSSaemmul"),
-                            ft.Text("오늘 집중 시간", size=11, color=TEXT_MUT,
+                            ft.Text("Today's Focus Time", size=11, color=TEXT_MUT,
                                     font_family="DOSSaemmul"),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.END,
@@ -343,7 +338,7 @@ class RankingView:
         podium_card = card(
             ft.Column(
                 controls=[
-                    ft.Text("이번 주 TOP 3", size=14, weight=ft.FontWeight.W_400,
+                    ft.Text("This Week's TOP 3", size=14, weight=ft.FontWeight.W_400,
                             color=TEXT_PRI, font_family="DOSSaemmul",
                             text_align=ft.TextAlign.CENTER),
                     ft.Container(height=14),
@@ -370,7 +365,7 @@ class RankingView:
                     border_radius=8,
                     padding=ft.padding.only(left=14, top=6, right=14, bottom=6),
                 )
-                for label in ["오늘", "이번 주", "이번 달", "전체"]
+                for label in ["Today", "This Week", "This Month", "All Time"]
             ],
             spacing=8,
         )
@@ -382,15 +377,15 @@ class RankingView:
                         controls=[
                             ft.Column(
                                 controls=[
-                                    ft.Text("친구 랭킹", size=26, weight=ft.FontWeight.W_400,
+                                    ft.Text("Friend Ranking", size=26, weight=ft.FontWeight.W_400,
                                             color=TEXT_PRI, font_family="DOSSaemmul"),
-                                    ft.Text("오늘 누가 가장 집중했을까요?",
+                                    ft.Text("Who focused the most today?",
                                             size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
                                 ],
                                 spacing=2,
                                 expand=True,
                             ),
-                            ghost_btn("친구 추가", icon=ft.Icons.PERSON_ADD),
+                            ghost_btn("Add Friend", icon=ft.Icons.PERSON_ADD),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),

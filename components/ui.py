@@ -1,6 +1,6 @@
 import flet as ft
 
-# ── 디자인 토큰 ───────────────────────────────────────────────────
+# ── Design Tokens ─────────────────────────────────────────────────
 BG_BASE   = "#FFFFFF"
 BG_CARD   = "#F4F6F8"
 BG_CARD2  = "#EAECEF"
@@ -22,15 +22,13 @@ SHADOW    = "#00000012"
 RADIUS    = 14
 RADIUS_SM = 8
 
-# ── 폰트 상수 (한 곳에서 관리) ───────────────────────────────────
-FONT      = "DOSSaemmul"   # 본문 폰트
-FONT_MONO = "DOSSaemmul"      # 숫자/코드 폰트
+FONT      = "DOSSaemmul"
+FONT_MONO = "DOSSaemmul"
 
-# W300 기준 weight 매핑
-W_LIGHT   = ft.FontWeight.W_400   # 기본 본문
-W_REGULAR = ft.FontWeight.W_400   # 일반 강조
-W_MEDIUM  = ft.FontWeight.W_500   # 소제목
-W_BOLD    = ft.FontWeight.W_700   # 제목·버튼
+W_LIGHT   = ft.FontWeight.W_400
+W_REGULAR = ft.FontWeight.W_400
+W_MEDIUM  = ft.FontWeight.W_500
+W_BOLD    = ft.FontWeight.W_700
 
 
 def card(content: ft.Control, padding=16, expand=False, **kwargs) -> ft.Container:
@@ -129,7 +127,7 @@ def stat_chip(label: str, value: str, color: str = ACCENT) -> ft.Container:
 
 
 def mascot_widget(size: int = 64) -> ft.Container:
-    """픽셀아트 마스코트 — 순수 Flet Container 블록"""
+    """Pixel-art mascot — pure Flet Container blocks"""
     s = size / 64
 
     def px(w, h, color, radius=0):

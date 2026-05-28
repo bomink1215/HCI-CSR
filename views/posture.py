@@ -31,17 +31,16 @@ def _find_model():
             return p
     return None
 
-POSTURE_ROUNDED = "rounded_back"    # 등 굽음 (거북목 통합)
-POSTURE_SLOUCH  = "slouch"          # 허리 자세 (골반 빠짐)
-POSTURE_TILT    = "shoulder_tilt"   # 어깨 불균형
+POSTURE_ROUNDED = "rounded_back"
+POSTURE_SLOUCH  = "slouch"
+POSTURE_TILT    = "shoulder_tilt"
 POSTURE_OK      = "good"
 
-# ── 캘리브레이션 상태 (모듈 레벨 공유) ──────────────────────────
 _calib = {
     "done":     False,
-    "ear_y":    None,   # 기준 귀 Y 중간값 (허리 자세 기준)
-    "face_w":   None,   # 기준 귀간격 (등 굽음 — 얼굴 카메라 거리)
-    "tilt_raw": None,   # 기준 어깨 기울기 / face_w (None이면 어깨 안 보임)
+    "ear_y":    None,
+    "face_w":   None,
+    "tilt_raw": None,
 }
 
 
@@ -54,21 +53,6 @@ def _vis(lm) -> float:
 
 
 def _extract_features(landmarks):
-    """
-    랜드마크에서 자세 특징값을 추출.
-    Returns dict or None (감지 실패 시).
-
-    ── 지표 설계 ─────────────────────────────────────────────────
-    face_w   : 귀 사이 X 거리 (카메라 거리 반영 — 가까울수록 큼)
-    ear_y    : 귀 Y 중간값   (몸이 아래로 내려가면 커짐)
-    tilt_raw : 좌우 어깨 Y 차이 / face_w
-
-    ── 자세별 신호 패턴 ──────────────────────────────────────────
-    [등 굽음]  몸이 앞으로 기울어짐 → face_w 증가 (얼굴이 가까워짐)
-    [허리 자세] 몸이 아래+뒤로 내려감 → ear_y 증가 + face_w 감소
-               (골반이 의자 끝으로 빠지면서 몸이 내려가고 뒤로 기댐)
-    [어깨]    좌우 어깨 Y 차이 증가
-    """
     l_ear = landmarks[7]; r_ear = landmarks[8]
     l_sh  = landmarks[11]; r_sh = landmarks[12]
 
@@ -90,19 +74,14 @@ def _extract_features(landmarks):
 
     if sh_vis > 0.4:
         feat["tilt_raw"]  = abs(l_sh.y - r_sh.y) / face_w
-        feat["tilt_side"] = "왼쪽" if l_sh.y > r_sh.y else "오른쪽"
+        feat["tilt_side"] = "Left" if l_sh.y > r_sh.y else "Right"
 
     return feat
 
 
 def _calc_score(feat: dict) -> tuple:
-    """
-    캘리브레이션 기준값 대비 편차로 점수·자세 유형 계산.
-
-    Returns (score: int, issues: list[str], posture_type: str, ded: dict, dbg: dict)
-    """
     if not _calib["done"]:
-        return 100, ["캘리브레이션 대기 중..."], POSTURE_OK, {}, {}
+        return 100, ["Waiting for calibration..."], POSTURE_OK, {}, {}
 
     score  = 100
     issues = []
@@ -112,8 +91,8 @@ def _calc_score(feat: dict) -> tuple:
     base_face_w = _calib["face_w"]
     base_tilt   = _calib["tilt_raw"]
 
-    zoom      = (feat["face_w"] - base_face_w) / base_face_w   # 양수=가까워짐
-    ear_drop  = feat["ear_y"] - base_ear_y                     # 양수=아래로 내려감
+    zoom      = (feat["face_w"] - base_face_w) / base_face_w
+    ear_drop  = feat["ear_y"] - base_ear_y
 
     dbg = {
         "zoom":     round(zoom,     3),
@@ -122,30 +101,22 @@ def _calc_score(feat: dict) -> tuple:
         "base_fw":  round(base_face_w,    3),
     }
 
-    # ── 1. 허리 자세 (골반 빠짐) — 우선 판단 ────────────────────
-    # 몸이 아래로 내려가면 귀 Y가 기준보다 증가.
-    # ear_drop 단독으로 판단 (zoom 조건 제거 — 몸이 내려가도 얼굴이
-    # 카메라에 가까워질 수 있어서 zoom이 항상 음수가 아님).
-    SLOUCH_EAR_MARGIN = 0.06   # 귀가 기준보다 6% 아래로 내려가면 감점
+    SLOUCH_EAR_MARGIN = 0.06
     if ear_drop > SLOUCH_EAR_MARGIN:
         excess = ear_drop - SLOUCH_EAR_MARGIN
         d = min(int(excess * 350), 45)
         score -= d
         ded[POSTURE_SLOUCH] += d
-        issues.append("허리 자세가 무너졌어요 — 엉덩이를 의자 깊숙이 밀어넣어 주세요")
+        issues.append("Posture collapsing — push hips deep into the chair")
 
-    # ── 2. 등 굽음 (앞으로 기울기) ───────────────────────────────
-    # 얼굴이 가까워짐(zoom 증가). 단 허리 자세가 이미 감지된 경우 스킵
-    # (몸이 내려갈 때 face_w도 약간 커질 수 있어서 중복 방지)
     ROUNDED_MARGIN = 0.10
     if zoom > ROUNDED_MARGIN and ded[POSTURE_SLOUCH] == 0:
         excess = zoom - ROUNDED_MARGIN
         d = min(int(excess * 280), 40)
         score -= d
         ded[POSTURE_ROUNDED] += d
-        issues.append("등이 굽었어요 — 등을 펴고 어깨를 뒤로 당겨주세요")
+        issues.append("Back rounded — straighten up and pull shoulders back")
 
-    # ── 3. 어깨 불균형 ────────────────────────────────────────────
     TILT_MARGIN = 0.12
     if base_tilt is not None and feat.get("tilt_raw") is not None:
         delta_tilt = feat["tilt_raw"] - base_tilt
@@ -154,15 +125,15 @@ def _calc_score(feat: dict) -> tuple:
             d = min(int(excess * 180), 35)
             score -= d
             ded[POSTURE_TILT] += d
-            side = feat.get("tilt_side", "한쪽")
-            issues.append(f"어깨가 기울었어요 — {side} 어깨를 올려주세요")
+            side = feat.get("tilt_side", "One")
+            issues.append(f"Shoulders tilted — raise your {side.lower()} shoulder")
 
     score = max(0, min(100, score))
     posture_type = POSTURE_OK
     if any(v > 0 for v in ded.values()):
         posture_type = max(ded, key=ded.get)
     if not issues:
-        issues.append("자세 좋아요! 계속 유지하세요 👍")
+        issues.append("Great posture! Keep it up 👍")
 
     dbg["ded"] = dict(ded)
     return score, issues, posture_type, ded, dbg
@@ -175,7 +146,6 @@ class PostureView:
         self._thread     = None
         self._calib_done = False
 
-        # Flet UI refs
         self.score_ref      = ft.Ref()
         self.status_ref     = ft.Ref()
         self.ring_ref       = ft.Ref()
@@ -184,26 +154,21 @@ class PostureView:
         self.issue_col_ref  = ft.Ref()
         self.fps_ref        = ft.Ref()
         self.toggle_btn_ref = ft.Ref()
-        self.calib_card_ref = ft.Ref()   # 캘리브레이션 안내 카드
+        self.calib_card_ref = ft.Ref()
 
-    # ── 캘리브레이션 ──────────────────────────────────────────────
     def _run_calibration(self, landmarker, cap, mp, win_name, start_time):
-        """
-        카메라를 열어 3초 카운트다운 → 3초 수집 → 중앙값으로 baseline 확정.
-        OpenCV 창에 안내 오버레이 표시.
-        """
         import cv2
-        COUNTDOWN = 3   # 준비 카운트다운 (초)
-        COLLECT   = 3   # 수집 시간 (초)
+        COUNTDOWN = 3
+        COLLECT   = 3
 
-        phase     = "countdown"   # countdown → collect → done
+        phase     = "countdown"
         phase_start = time.time()
 
         samples_ear_y  = []
         samples_face_w = []
         samples_tilt   = []
 
-        self._set_status("바른 자세로 앉아주세요...")
+        self._set_status("Sit up straight...")
 
         while True:
             ret, frame = cap.read()
@@ -216,7 +181,6 @@ class PostureView:
             now     = time.time()
             elapsed = now - phase_start
 
-            # ── MediaPipe 처리 ───────────────────────────────────
             rgb    = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
             ts_ms  = int((now - start_time) * 1000)
@@ -238,7 +202,6 @@ class PostureView:
                     for px, py in pts[:13]:
                         cv2.circle(frame, (px, py), 4, (0,201,167), -1, cv2.LINE_AA)
 
-            # ── 오버레이 ─────────────────────────────────────────
             overlay = frame.copy()
             cv2.rectangle(overlay, (0,0), (w, h), (244,246,248), -1)
             cv2.addWeighted(overlay, 0.55, frame, 0.45, 0, frame)
@@ -286,11 +249,10 @@ class PostureView:
 
             cv2.imshow(win_name, frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
-                return False   # 사용자가 취소
+                return False
 
-        # ── baseline 확정 ────────────────────────────────────────
         if len(samples_face_w) < 5:
-            self._set_status("❌ 캘리브레이션 실패 — 얼굴이 감지되지 않았어요")
+            self._set_status("❌ Calibration failed — face not detected")
             return False
 
         _calib["ear_y"]    = statistics.median(samples_ear_y)
@@ -299,10 +261,9 @@ class PostureView:
         _calib["done"]        = True
 
         self._set_calib_done(True)
-        self._set_status("분석 중... (별도 창 확인)")
+        self._set_status("Analyzing... (check the separate window)")
         return True
 
-    # ── 카메라 워커 (메인 루프) ───────────────────────────────────
     def _camera_worker(self):
         try:
             import cv2
@@ -312,17 +273,17 @@ class PostureView:
                 PoseLandmarker, PoseLandmarkerOptions, RunningMode
             )
         except ImportError as e:
-            self._set_status(f"❌ 라이브러리 오류: {e}")
+            self._set_status(f"❌ Library error: {e}")
             self.monitoring = False
             return
 
         model_path = _find_model()
         if not model_path:
-            self._set_status("❌ pose_landmarker.task 파일 없음")
+            self._set_status("❌ pose_landmarker.task file not found")
             self.monitoring = False
             return
 
-        self._set_status("🔄 모델 로딩 중...")
+        self._set_status("🔄 Loading model...")
         try:
             options = PoseLandmarkerOptions(
                 base_options=mp_python.BaseOptions(model_asset_path=model_path),
@@ -333,7 +294,7 @@ class PostureView:
             )
             landmarker = PoseLandmarker.create_from_options(options)
         except Exception as e:
-            self._set_status(f"❌ 모델 로드 실패: {e}")
+            self._set_status(f"❌ Model load failed: {e}")
             self.monitoring = False
             return
 
@@ -343,7 +304,7 @@ class PostureView:
         cap.set(cv2.CAP_PROP_FPS, 30)
 
         if not cap.isOpened():
-            self._set_status("❌ 카메라를 열 수 없어요")
+            self._set_status("❌ Cannot open camera")
             self.monitoring = False
             landmarker.close()
             return
@@ -352,12 +313,11 @@ class PostureView:
         alert_manager.set_monitoring(True)
 
         import cv2 as _cv2
-        win_name   = "FocusMate — 자세 분석 (Q: 종료)"
+        win_name   = "FocusMate — Posture Analysis (Q: quit)"
         start_time = time.time()
         _cv2.namedWindow(win_name, _cv2.WINDOW_NORMAL)
         _cv2.resizeWindow(win_name, 800, 600)
 
-        # ── 캘리브레이션 ─────────────────────────────────────────
         reset_calibration()
         ok = self._run_calibration(landmarker, cap, mp, win_name, start_time)
         if not ok or not self.monitoring:
@@ -366,18 +326,16 @@ class PostureView:
             _cv2.destroyAllWindows()
             alert_manager.set_monitoring(False)
             self._set_cam_on(False)
-            self._set_status("모니터링을 시작해주세요")
+            self._set_status("Click Start Monitoring to begin")
             self._reset_score_ui()
             return
 
-        SKEL_CONNS = [
-            (11,12),(11,13),(13,15),(12,14),(14,16),
-        ]
+        SKEL_CONNS = [(11,12),(11,13),(13,15),(12,14),(14,16)]
 
         fps_timer = time.time()
         fps_count = 0
         score     = 100
-        issues    = ["자세 좋아요! 계속 유지하세요 👍"]
+        issues    = ["Great posture! Keep it up 👍"]
 
         try:
             while self.monitoring:
@@ -398,7 +356,7 @@ class PostureView:
 
                 posture_type = POSTURE_OK
                 ded          = {}
-                zoom         = 0.0
+                dbg          = {}
                 if result and result.pose_landmarks:
                     lm   = result.pose_landmarks[0]
                     feat = _extract_features(lm)
@@ -414,7 +372,6 @@ class PostureView:
                         for px, py in pts[:13]:
                             _cv2.circle(frame, (px, py), 4, (0,201,167), -1, _cv2.LINE_AA)
 
-                # ── 상단 HUD ──────────────────────────────────────
                 color_bgr = (0,201,167) if score>=70 else (71,179,255) if score>=50 else (92,92,255)
                 _cv2.rectangle(frame, (0,0), (w,60), (244,246,248), -1)
                 _cv2.putText(frame, f"Score: {score}",
@@ -424,10 +381,9 @@ class PostureView:
                              (14, 56), _cv2.FONT_HERSHEY_SIMPLEX, 0.55,
                              (90,99,117), 1, _cv2.LINE_AA)
 
-                # ── 하단 디버그 패널 ──────────────────────────────
                 dbg_lines = [
                     f"[rounded] zoom     : {dbg.get('zoom',0):+.3f}  (margin +0.10)",
-                    f"[slouch]  ear_drop : {dbg.get('ear_drop',0):+.3f}  (margin +0.04, need zoom<-0.08)",
+                    f"[slouch]  ear_drop : {dbg.get('ear_drop',0):+.3f}  (margin +0.04)",
                     f"[tilt]    base_tilt: {(_calib.get('tilt_raw') or 0):.3f}",
                     f"face_w now:{dbg.get('face_w',0):.3f}  base:{dbg.get('base_fw',0):.3f}",
                     f"ded  rounded:{ded.get(POSTURE_ROUNDED,0)}  slouch:{ded.get(POSTURE_SLOUCH,0)}  tilt:{ded.get(POSTURE_TILT,0)}",
@@ -462,14 +418,13 @@ class PostureView:
             alert_manager.set_monitoring(False)
             self._set_cam_on(False)
             self._set_calib_done(False)
-            self._set_status("모니터링을 시작해주세요")
+            self._set_status("Click Start Monitoring to begin")
             self._reset_score_ui()
             try:
                 self.page.update()
             except Exception:
                 pass
 
-    # ── UI 헬퍼 ──────────────────────────────────────────────────
     def _update_score_ui(self, score: int, issues: list, fps: int):
         color = ACCENT if score >= 70 else (WARNING if score >= 50 else DANGER)
         try:
@@ -514,7 +469,7 @@ class PostureView:
             if self.cam_dot_ref.current:
                 self.cam_dot_ref.current.bgcolor = ACCENT if on else DANGER
             if self.cam_label_ref.current:
-                self.cam_label_ref.current.value = "카메라 켜짐" if on else "카메라 꺼짐"
+                self.cam_label_ref.current.value = "Camera On" if on else "Camera Off"
                 self.cam_label_ref.current.color = ACCENT if on else DANGER
             self.page.update()
         except Exception:
@@ -529,7 +484,6 @@ class PostureView:
             pass
 
     def _set_calib_done(self, done: bool):
-        """캘리브레이션 완료 여부를 UI 카드에 반영"""
         try:
             if self.calib_card_ref.current:
                 self.calib_card_ref.current.bgcolor = ACCENT_LT if done else BG_CARD2
@@ -539,7 +493,7 @@ class PostureView:
                 icon_row: ft.Row = col.controls[0]
                 icon_row.controls[0].name  = ft.Icons.CHECK_CIRCLE if done else ft.Icons.RADIO_BUTTON_UNCHECKED
                 icon_row.controls[0].color = ACCENT if done else TEXT_MUT
-                icon_row.controls[1].value = "기준 자세 완료 ✓" if done else "기준 자세 미설정"
+                icon_row.controls[1].value = "Baseline posture set ✓" if done else "Baseline not set"
                 icon_row.controls[1].color = ACCENT if done else TEXT_MUT
                 self.calib_card_ref.current.update()
         except Exception:
@@ -551,18 +505,17 @@ class PostureView:
         row: ft.Row = btn.content
         if self.monitoring:
             row.controls[0].value = "\ue047"
-            row.controls[1].value = "모니터링 중지"
+            row.controls[1].value = "Stop Monitoring"
             btn.bgcolor = DANGER
             btn.update()
             self._thread = threading.Thread(target=self._camera_worker, daemon=True)
             self._thread.start()
         else:
             row.controls[0].value = "\ue037"
-            row.controls[1].value = "모니터링 시작"
+            row.controls[1].value = "Start Monitoring"
             btn.bgcolor = ACCENT
             btn.update()
 
-    # ── 점수 링 ──────────────────────────────────────────────────
     def _score_ring(self) -> ft.Container:
         return ft.Container(
             width=150, height=150,
@@ -582,7 +535,7 @@ class PostureView:
                                         size=36, weight=ft.FontWeight.W_500,
                                         color=ACCENT, font_family="DOSSaemmul",
                                         text_align=ft.TextAlign.CENTER),
-                                ft.Text("자세 점수", size=11, color=TEXT_MUT,
+                                ft.Text("Posture Score", size=11, color=TEXT_MUT,
                                         font_family="DOSSaemmul",
                                         text_align=ft.TextAlign.CENTER),
                             ],
@@ -595,11 +548,9 @@ class PostureView:
             ),
         )
 
-    # ── build ─────────────────────────────────────────────────────
     def build(self) -> ft.Container:
         model_path = _find_model()
 
-        # 캘리브레이션 상태 카드
         calib_card = ft.Container(
             ref=self.calib_card_ref,
             content=ft.Column(
@@ -608,14 +559,14 @@ class PostureView:
                         controls=[
                             ft.Icon(ft.Icons.RADIO_BUTTON_UNCHECKED,
                                     size=16, color=TEXT_MUT),
-                            ft.Text("기준 자세 미설정", size=12,
+                            ft.Text("Baseline not set", size=12,
                                     color=TEXT_MUT, font_family="DOSSaemmul"),
                         ],
                         spacing=8,
                     ),
                     ft.Text(
-                        "모니터링 시작 시 3초 카운트다운 후\n"
-                        "바른 자세를 3초간 유지하면 기준이 설정됩니다",
+                        "When monitoring starts, a 3s countdown begins.\n"
+                        "Hold a good posture for 3s to set your baseline.",
                         size=11, color=TEXT_SEC, font_family="DOSSaemmul",
                     ),
                 ],
@@ -631,7 +582,7 @@ class PostureView:
             content=ft.Column(
                 controls=[
                     ft.Icon(ft.Icons.ACCESSIBILITY, size=52, color=BORDER),
-                    ft.Text("모니터링 시작 버튼을 누르면\nOpenCV 창이 열립니다",
+                    ft.Text("Press Start Monitoring\nto open the camera window",
                             size=14, color=TEXT_MUT, font_family="DOSSaemmul",
                             text_align=ft.TextAlign.CENTER),
                     ft.Container(height=8),
@@ -642,7 +593,7 @@ class PostureView:
                                              width=8, height=8, bgcolor=DANGER,
                                              border_radius=4),
                                 ft.Text(ref=self.cam_label_ref,
-                                        value="카메라 꺼짐", size=12,
+                                        value="Camera Off", size=12,
                                         color=DANGER, font_family="DOSSaemmul"),
                                 ft.Container(expand=True),
                                 ft.Text(ref=self.fps_ref, value="",
@@ -672,8 +623,8 @@ class PostureView:
                 controls=[
                     ft.Icon(ft.Icons.WARNING, size=16, color=WARNING),
                     ft.Text(
-                        "pose_landmarker.task 파일 없음!\n"
-                        "터미널: curl -o pose_landmarker.task "
+                        "pose_landmarker.task not found!\n"
+                        "Terminal: curl -o pose_landmarker.task "
                         "\"https://storage.googleapis.com/mediapipe-models/"
                         "pose_landmarker/pose_landmarker_lite/float16/latest/"
                         "pose_landmarker_lite.task\"",
@@ -694,14 +645,14 @@ class PostureView:
                 card(
                     ft.Column(
                         controls=[
-                            ft.Text("실시간 점수", size=14, weight=ft.FontWeight.W_400,
+                            ft.Text("Live Score", size=14, weight=ft.FontWeight.W_400,
                                     color=TEXT_PRI, font_family="DOSSaemmul"),
                             ft.Container(height=14),
                             ft.Container(content=self._score_ring(),
                                          alignment=ft.Alignment(0, 0)),
                             ft.Container(height=10),
                             ft.Text(ref=self.status_ref,
-                                    value="모니터링을 시작해주세요",
+                                    value="Click Start Monitoring to begin",
                                     size=12, color=TEXT_MUT,
                                     font_family="DOSSaemmul",
                                     text_align=ft.TextAlign.CENTER),
@@ -718,7 +669,7 @@ class PostureView:
                     content=ft.Row(
                         controls=[
                             ft.Icon(ft.Icons.PLAY_ARROW, size=18, color="#FFFFFF"),
-                            ft.Text("모니터링 시작", size=14, weight=ft.FontWeight.W_400,
+                            ft.Text("Start Monitoring", size=14, weight=ft.FontWeight.W_400,
                                     color="#FFFFFF", font_family="DOSSaemmul"),
                         ],
                         alignment=ft.MainAxisAlignment.CENTER,
@@ -737,9 +688,9 @@ class PostureView:
         main_area = ft.Column(
             controls=[
                 ft.Column(controls=[
-                    ft.Text("자세 교정", size=26, weight=ft.FontWeight.W_400,
+                    ft.Text("Posture Correction", size=26, weight=ft.FontWeight.W_400,
                             color=TEXT_PRI, font_family="DOSSaemmul"),
-                    ft.Text("시작 시 바른 자세를 3초 유지 → 이후 실시간 비교",
+                    ft.Text("Hold good posture for 3s at start → real-time comparison",
                             size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
                 ], spacing=2),
                 ft.Container(height=12),
