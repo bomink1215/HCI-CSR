@@ -3,7 +3,7 @@ import threading
 import concurrent.futures
 from requests.adapters import HTTPAdapter
 
-API_KEY    = "AIzaSyBnhgcaGHMzXTl-C8ulSyj5G1O7kzyzm7U"
+API_KEY    = "새로운 키"
 PROJECT_ID = "zzook-52423"
 
 _AUTH      = "https://identitytoolkit.googleapis.com/v1/accounts"
