@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 from components.ui import card, mascot_widget
+from utils import firebase, session, score_store
 
 
 def _notify(title: str, message: str):
@@ -13,8 +14,7 @@ def _notify(title: str, message: str):
         try:
             script = (
                 f'display notification "{message}" '
-                f'with title "{title}" '
-                f'sound name "Glass"'
+                f'with title "{title}"'
             )
             subprocess.Popen(["osascript", "-e", script])
         except Exception:
@@ -174,39 +174,50 @@ MODE_COLORS  = {"focus": ACCENT,   "rest": PURPLE}
 MODE_LABELS  = {"focus": "Focus",  "rest": "Break"}
 
 
-def _beep(freq: int = 880, duration: float = 0.3, times: int = 2):
+def _completion_sound():
+    """C-E-G 상행 아르페지오 + 벨 배음 — 완료 느낌 차임."""
     try:
         import math, wave, tempfile, os
         sample_rate = 44100
-        n_samples = int(sample_rate * duration)
+        # C5=523 Hz, E5=659 Hz, G5=784 Hz  (마지막 노트 길게)
+        notes = [(523, 0.13), (659, 0.13), (784, 0.32)]
+        data = b""
+        for freq, dur in notes:
+            n = int(sample_rate * dur)
+            for i in range(n):
+                t = i / sample_rate
+                env = math.exp(-5 * t / dur)          # 자연 감쇠
+                v = env * (
+                    0.60 * math.sin(2 * math.pi * freq * t)
+                    + 0.22 * math.sin(2 * math.pi * freq * 2 * t)
+                    + 0.12 * math.sin(2 * math.pi * freq * 3 * t)
+                    + 0.06 * math.sin(2 * math.pi * freq * 4 * t)
+                )
+                data += int(32767 * 0.52 * v).to_bytes(2, "little", signed=True)
+
         tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-        with wave.open(tmp.name, 'w') as wf:
+        with wave.open(tmp.name, "w") as wf:
             wf.setnchannels(1)
             wf.setsampwidth(2)
             wf.setframerate(sample_rate)
-            for _ in range(times):
-                data = b""
-                for i in range(n_samples):
-                    val = int(32767 * 0.5 * math.sin(2 * math.pi * freq * i / sample_rate))
-                    data += val.to_bytes(2, 'little', signed=True)
-                wf.writeframes(data)
-        import sys, subprocess
-        if sys.platform == "win32":
+            wf.writeframes(data)
+
+        if sys.platform == "darwin":
+            subprocess.Popen(["afplay", tmp.name])
+        elif sys.platform == "win32":
             import winsound
             winsound.PlaySound(tmp.name, winsound.SND_FILENAME | winsound.SND_ASYNC)
-        elif sys.platform == "darwin":
-            subprocess.Popen(["afplay", tmp.name])
         else:
             subprocess.Popen(["aplay", "-q", tmp.name])
-        time.sleep(duration * times + 0.1)
+
+        time.sleep(sum(d for _, d in notes) + 0.15)
         os.unlink(tmp.name)
     except Exception:
         try:
-            import sys
             if sys.platform == "win32":
                 import winsound
-                for _ in range(times):
-                    winsound.Beep(freq, int(duration * 1000))
+                for f in (523, 659, 784):
+                    winsound.Beep(f, 130)
         except Exception:
             pass
 
@@ -226,7 +237,7 @@ class PomodoroView:
         self.cycle_count   = 4
         self.auto_start = False
         self.sound_on   = True
-        self.history = []
+        self.history = list(score_store.get_today_history())  # 저장된 오늘 로그 복원
         self.session_start_str = ""
 
         self.time_ref        = ft.Ref()
@@ -271,14 +282,16 @@ class PomodoroView:
         self._update_display()
 
     def _update_tabs(self):
+        _BG = {"focus": ACCENT_LT, "rest": "#EDE9FF"}
         for m in ("focus", "rest"):
             is_active = m == self.mode
+            color = MODE_COLORS[m]
             if self.tab_refs[m].current:
-                self.tab_refs[m].current.bgcolor = ACCENT_LT if is_active else "transparent"
-                self.tab_refs[m].current.border  = ft.border.all(1, ACCENT if is_active else "transparent")
+                self.tab_refs[m].current.bgcolor = _BG[m] if is_active else "transparent"
+                self.tab_refs[m].current.border  = ft.border.all(1, color if is_active else "transparent")
                 self.tab_refs[m].current.update()
             if self.tab_text_refs[m].current:
-                self.tab_text_refs[m].current.color = MODE_COLORS[m] if is_active else TEXT_MUT
+                self.tab_text_refs[m].current.color = color if is_active else TEXT_MUT
                 self.tab_text_refs[m].current.update()
 
     def _fire_tick(self):
@@ -290,6 +303,14 @@ class PomodoroView:
 
     def _start_stop(self, e):
         if not self.running:
+            # remaining=0인 완료 상태에서 누르면 현재 모드로 리셋 후 시작
+            if self.remaining <= 0:
+                secs = 10 if self.test_mode else (
+                    self.focus_minutes if self.mode == "focus" else self.rest_minutes
+                ) * 60
+                self.remaining = secs
+                self.total     = secs
+                self._update_display()
             self.running = True
             self.paused  = False
             if not self.paused or not self.session_start_str:
@@ -347,18 +368,41 @@ class PomodoroView:
         if self.remaining <= 0 and self.running:
             self.running = False
             if self.sound_on:
-                threading.Thread(target=_beep, args=(880, 0.25, 3), daemon=True).start()
+                threading.Thread(target=_completion_sound, daemon=True).start()
             self._on_complete()
 
     def _on_complete(self):
-        now_str = time.strftime("%H:%M")
+        # 대시보드 버튼을 즉시 PLAY로 업데이트 (running이 이미 False인 상태)
+        self._fire_tick()
+
+        now_str   = time.strftime("%H:%M")
         start_str = self.session_start_str or "—"
-        self.history.append((MODE_LABELS[self.mode], start_str, now_str, "Done"))
+        entry = (MODE_LABELS[self.mode], start_str, now_str, "Done")
+        self.history.append(entry)
+        score_store.add_history_entry(*entry)   # 로그아웃해도 오늘치 유지
         self._update_history()
 
         if self.mode == "focus":
             self.sessions_done += 1
             self._update_dots()
+            # Firestore에 stats 업데이트
+            # 테스트 모드: 세션당 1분으로 기록 (랭킹 반영 테스트 가능)
+            focus_mins = self.focus_minutes if not self.test_mode else 1
+            score_store.add_focus_minutes(focus_mins)
+            def _update_stats():
+                from datetime import date as _date
+                user = session.get_user()
+                if user and user.get("uid") and user.get("id_token"):
+                    uid, token = user["uid"], user["id_token"]
+                    # 누적 stats 업데이트
+                    result = firebase.update_stats(uid, token, focus_mins, 1)
+                    if "error" not in (result or {}):
+                        score_store.mark_synced(focus_mins)
+                    # 오늘 집중 시간 즉시 동기화 (랭킹 실시간 반영)
+                    today_min = score_store.get_today_focus_minutes()
+                    firebase.update_today_focus(uid, token, today_min,
+                                                _date.today().isoformat())
+            threading.Thread(target=_update_stats, daemon=True).start()
 
         if self.mode == "focus" and self.sessions_done >= self.cycle_count:
             threading.Thread(
@@ -393,6 +437,7 @@ class PomodoroView:
             if self.play_icon_ref.current:
                 self.play_icon_ref.current.icon = ft.Icons.PAUSE
                 self.play_icon_ref.current.update()
+            self._fire_tick()  # 대시보드에 running=True 상태 즉시 전달
             self.page.run_task(self._tick_async)
         elif self.auto_start:
             self._set_mode(next_mode)
@@ -402,6 +447,7 @@ class PomodoroView:
             if self.play_icon_ref.current:
                 self.play_icon_ref.current.icon = ft.Icons.PAUSE
                 self.play_icon_ref.current.update()
+            self._fire_tick()  # 대시보드에 running=True 상태 즉시 전달
             self.page.run_task(self._tick_async)
         else:
             self._show_done_dialog(next_label, next_mode)
@@ -501,15 +547,18 @@ class PomodoroView:
                 pass
 
     def _dot_controls(self) -> list:
+        mode_color = MODE_COLORS[self.mode]
+        mode_lt    = ACCENT_LT if self.mode == "focus" else "#EDE9FF"
         dots = []
         for i in range(self.cycle_count):
             done       = i < self.sessions_done
             is_current = i == self.sessions_done and self.sessions_done < self.cycle_count
             dots.append(ft.Container(
                 width=10, height=10,
-                bgcolor=ACCENT if done else (ACCENT_LT if is_current else BORDER),
+                bgcolor=ACCENT if done else (mode_lt if is_current else BORDER),
                 border_radius=5,
-                border=ft.border.all(1.5, ACCENT if (done or is_current) else BORDER),
+                border=ft.border.all(1.5,
+                    ACCENT if done else (mode_color if is_current else BORDER)),
             ))
         return dots
 
@@ -564,27 +613,33 @@ class PomodoroView:
 
     def build(self) -> ft.Container:
 
+        _TAB_BG = {"focus": ACCENT_LT, "rest": "#EDE9FF"}
+
         def _mode_tab(mode: str) -> ft.Container:
             is_active = mode == self.mode
+            color = MODE_COLORS[mode]
             return ft.Container(
                 ref=self.tab_refs[mode],
                 content=ft.Text(
                     ref=self.tab_text_refs[mode],
                     value=MODE_LABELS[mode],
                     size=12, weight=ft.FontWeight.W_400,
-                    color=MODE_COLORS[mode] if is_active else TEXT_MUT,
+                    color=color if is_active else TEXT_MUT,
                     font_family="DOSSaemmul",
                 ),
-                bgcolor=ACCENT_LT if is_active else "transparent",
+                bgcolor=_TAB_BG[mode] if is_active else "transparent",
                 border_radius=8,
                 padding=ft.padding.only(left=14, top=7, right=14, bottom=7),
                 on_click=lambda _, m=mode: self._set_mode(m),
-                border=ft.border.all(1, ACCENT if is_active else "transparent"),
+                border=ft.border.all(1, color if is_active else "transparent"),
             )
+
+        RING = 155
 
         timer_area = card(
             ft.Column(
                 controls=[
+                    ft.Container(expand=True),
                     ft.Container(
                         content=ft.Row(
                             controls=[_mode_tab("focus"), _mode_tab("rest")],
@@ -594,44 +649,44 @@ class PomodoroView:
                         bgcolor=BG_CARD2, border_radius=10,
                         padding=6, border=ft.border.all(1, BORDER),
                     ),
-                    ft.Container(height=24),
+                    ft.Container(height=14),
                     ft.Container(
-                        width=200, height=200,
+                        width=RING, height=RING,
                         alignment=ft.Alignment(0, 0),
                         content=ft.Stack(controls=[
                             ft.ProgressRing(
                                 ref=self.ring_ref,
-                                value=1.0, width=200, height=200,
-                                stroke_width=14, color=ACCENT, bgcolor=BORDER,
+                                value=1.0, width=RING, height=RING,
+                                stroke_width=10, color=ACCENT, bgcolor=BORDER,
                             ),
                             ft.Container(
-                                width=200, height=200,
+                                width=RING, height=RING,
                                 alignment=ft.Alignment(0, 0),
                                 content=ft.Column(
                                     controls=[
                                         ft.Text(
                                             ref=self.time_ref,
                                             value=self._fmt(self.remaining),
-                                            size=50, weight=ft.FontWeight.W_500,
+                                            size=38, weight=ft.FontWeight.W_500,
                                             color=TEXT_PRI, font_family="DOSSaemmul",
                                             text_align=ft.TextAlign.CENTER,
                                         ),
                                         ft.Text(
                                             ref=self.mode_label_ref,
                                             value=MODE_LABELS[self.mode],
-                                            size=13, color=TEXT_MUT,
+                                            size=11, color=TEXT_MUT,
                                             font_family="DOSSaemmul",
                                             text_align=ft.TextAlign.CENTER,
                                         ),
                                     ],
                                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                     alignment=ft.MainAxisAlignment.CENTER,
-                                    spacing=4,
+                                    spacing=2,
                                 ),
                             ),
                         ]),
                     ),
-                    ft.Container(height=18),
+                    ft.Container(height=10),
                     ft.Row(
                         ref=self.session_dots_ref,
                         controls=self._dot_controls(),
@@ -645,7 +700,7 @@ class PomodoroView:
                         font_family="DOSSaemmul",
                         text_align=ft.TextAlign.CENTER,
                     ),
-                    ft.Container(height=20),
+                    ft.Container(height=12),
                     ft.Row(
                         controls=[
                             ft.Container(
@@ -684,11 +739,14 @@ class PomodoroView:
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         spacing=16,
                     ),
+                    ft.Container(expand=True),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=0,
+                expand=True,
             ),
-            padding=28,
+            padding=18,
+            expand=2,
         )
 
         # ── Settings ──────────────────────────────────────────────────
@@ -701,6 +759,7 @@ class PomodoroView:
                 self.remaining = self.focus_minutes * 60
                 self.total     = self.remaining
                 self._update_display()
+            score_store.set_focus_goal(self.cycle_count, self.focus_minutes)
 
         def on_rest_change(e):
             self.rest_minutes = int(round(e.control.value / 5) * 5)
@@ -720,6 +779,7 @@ class PomodoroView:
             if self.sessions_done > self.cycle_count:
                 self.sessions_done = 0
             self._update_dots()
+            score_store.set_focus_goal(self.cycle_count, self.focus_minutes)
 
         def toggle_test_mode(e):
             self.test_mode = not self.test_mode
@@ -828,10 +888,13 @@ class PomodoroView:
                         ft.Switch(value=False, active_color=ACCENT, scale=0.8,
                                   on_change=toggle_auto),
                     ]),
+                    ft.Container(expand=True),
                 ],
                 spacing=10,
+                expand=True,
             ),
             padding=18,
+            expand=True,
         )
 
         history_card = card(
@@ -844,44 +907,53 @@ class PomodoroView:
                     *self._history_rows(),
                 ],
                 spacing=8,
+                scroll=ft.ScrollMode.AUTO,
+                expand=True,
             ),
             padding=18,
+            expand=1,
         )
 
         right_col = ft.Column(
-            controls=[settings, ft.Container(height=12), history_card],
-            width=270, spacing=0,
+            controls=[settings],
+            width=250, spacing=0,
         )
+
+        left_col = ft.Column(
+            controls=[timer_area, ft.Container(height=10), history_card],
+            expand=True, spacing=0,
+        )
+
+        BODY_H = 580
 
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Row(controls=[
-                        ft.Column(
-                            controls=[
-                                ft.Text("Pomodoro Timer", size=26, weight=ft.FontWeight.W_400,
-                                        color=TEXT_PRI, font_family="DOSSaemmul"),
-                                ft.Text("Build a rhythm of focus and rest",
-                                        size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
-                            ],
-                            spacing=2, expand=True,
-                        ),
-                    ]),
-                    ft.Container(height=16),
+                    ft.Column(
+                        controls=[
+                            ft.Text("Pomodoro Timer", size=26, weight=ft.FontWeight.W_400,
+                                    color=TEXT_PRI, font_family="DOSSaemmul"),
+                            ft.Text("Build a rhythm of focus and rest",
+                                    size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
+                        ],
+                        spacing=2,
+                    ),
+                    ft.Container(height=12),
                     ft.Row(
                         controls=[
-                            ft.Container(content=timer_area, expand=True),
+                            left_col,
                             ft.Container(width=16),
                             right_col,
                         ],
-                        vertical_alignment=ft.CrossAxisAlignment.START,
-                        expand=True,
+                        height=BODY_H,
+                        vertical_alignment=ft.CrossAxisAlignment.STRETCH,
                     ),
                 ],
-                scroll=ft.ScrollMode.AUTO,
+                spacing=0,
                 expand=True,
+                scroll=ft.ScrollMode.AUTO,
             ),
             expand=True,
-            padding=ft.padding.only(left=28, top=24, right=28, bottom=24),
+            padding=ft.padding.only(left=28, top=20, right=28, bottom=20),
             bgcolor=BG_BASE,
         )

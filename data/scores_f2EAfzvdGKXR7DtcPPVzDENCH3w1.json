@@ -1,0 +1,45 @@
+{
+  "2026-05-29": {
+    "posture_scores": [],
+    "focus_minutes": 4,
+    "synced_minutes": 4,
+    "history": [
+      {
+        "mode": "Focus",
+        "start": "16:57",
+        "end": "16:57",
+        "status": "Done"
+      },
+      {
+        "mode": "Break",
+        "start": "16:57",
+        "end": "16:57",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "16:57",
+        "end": "16:57",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "16:58",
+        "end": "16:58",
+        "status": "Done"
+      },
+      {
+        "mode": "Break",
+        "start": "16:58",
+        "end": "16:58",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "16:58",
+        "end": "16:58",
+        "status": "Done"
+      }
+    ]
+  }
+}

@@ -4,14 +4,16 @@ from views.posture import PostureView
 from views.pomodoro import PomodoroView
 from views.todo import TodoView
 from views.ranking import RankingView
+from views.auth_view import AuthView
+from views.profile_view import ProfileView
 from components.nav import NavBar
 from utils.alert_manager import start_alert_daemon
+from utils import session, firebase, score_store, todo_store
 
 APP_THEME = ft.Theme(
     color_scheme_seed="#00C9A7",
     font_family="DOSSaemmul",
 )
-
 BG_BASE = "#FFFFFF"
 
 
@@ -20,9 +22,7 @@ def main(page: ft.Page):
     page.theme = APP_THEME
     page.bgcolor = BG_BASE
     page.padding = 0
-    page.fonts = {
-        "DOSSaemmul": "fonts/DOSSaemmul.ttf",
-    }
+    page.fonts = {"DOSSaemmul": "fonts/DOSSaemmul.ttf"}
 
     page.window.width        = 1200
     page.window.height       = 720
@@ -30,6 +30,47 @@ def main(page: ft.Page):
     page.window.min_height   = 576
     page.window.aspect_ratio = 5 / 3
 
+    # 윈도우가 최종 크기(1200×720)로 완전히 자리잡은 뒤 중앙 이동
+    async def _center_window():
+        import asyncio
+        await asyncio.sleep(0.5)
+        page.window.center()
+        page.update()
+
+    page.run_task(_center_window)
+
+    def show_auth():
+        session.stop_auto_refresh()         # 로그아웃 시 토큰 갱신 중단
+        score_store.init_for_user("")       # 로컬 데이터 초기화 (계정 전환 오염 방지)
+        todo_store.init_for_user("")        # 투두 데이터 초기화
+        page.controls.clear()
+        auth = AuthView(page, on_login_success=show_main)
+        page.add(auth.build())
+        page.update()
+
+    def show_main(user: dict):
+        session.save(user)
+        session.set_user(user)
+        score_store.init_for_user(user["uid"])          # UID별 로컬 데이터 전환
+        todo_store.init_for_user(user["uid"])           # UID별 투두 데이터 전환
+        session.start_auto_refresh(firebase.refresh_id_token)  # 토큰 자동 갱신
+        page.controls.clear()
+        _build_main(page, show_auth)
+        page.update()
+
+    # Check for saved session
+    saved = session.load()
+    if saved:
+        session.set_user(saved)
+        score_store.init_for_user(saved["uid"])         # UID별 로컬 데이터 전환
+        todo_store.init_for_user(saved["uid"])          # UID별 투두 데이터 전환
+        session.start_auto_refresh(firebase.refresh_id_token)  # 저장된 세션도 즉시 갱신
+        _build_main(page, show_auth)
+    else:
+        show_auth()
+
+
+def _build_main(page: ft.Page, show_auth):
     current_view_name = ["dashboard"]
     views = {}
 
@@ -39,16 +80,22 @@ def main(page: ft.Page):
             v.visible = k == view_name
         nav.update_active(view_name)
         page.update()
+        if view_name == "ranking":
+            ranking_view.refresh()
+        elif view_name == "dashboard":
+            dashboard_view.refresh()
 
     dashboard_view = DashboardView(page, navigate)
     posture_view   = PostureView(page)
     pomodoro_view  = PomodoroView(page)
+    todo_view      = TodoView(page)
+    ranking_view   = RankingView(page)
+    profile_view   = ProfileView(page, on_logout=show_auth)
+
     pomodoro_view.on_tick             = dashboard_view.update_pomodoro
     dashboard_view.pomo_start_stop_cb = pomodoro_view._start_stop
     dashboard_view.pomo_reset_cb      = pomodoro_view._reset
     dashboard_view.pomo_skip_cb       = pomodoro_view._skip_next
-    todo_view      = TodoView(page)
-    ranking_view   = RankingView(page)
 
     views = {
         "dashboard": dashboard_view.build(),
@@ -56,6 +103,7 @@ def main(page: ft.Page):
         "pomodoro":  pomodoro_view.build(),
         "todo":      todo_view.build(),
         "ranking":   ranking_view.build(),
+        "profile":   profile_view.build(),
     }
 
     for k, v in views.items():
@@ -64,10 +112,7 @@ def main(page: ft.Page):
     nav = NavBar(navigate)
     nav_bar = nav.build()
 
-    content_stack = ft.Stack(
-        controls=list(views.values()),
-        expand=True,
-    )
+    content_stack = ft.Stack(controls=list(views.values()), expand=True)
 
     page.add(
         ft.Row(
@@ -83,6 +128,7 @@ def main(page: ft.Page):
 
     start_alert_daemon()
     page.update()
+    dashboard_view.refresh()
 
 
 ft.app(target=main)

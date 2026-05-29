@@ -20,6 +20,7 @@ class NavBar:
             ("pomodoro",  ft.Icons.TIMER,          "Timer"),
             ("todo",      ft.Icons.CHECKLIST,      "To-Do"),
             ("ranking",   ft.Icons.LEADERBOARD,    "Ranking"),
+            ("profile",   ft.Icons.PERSON,         "Profile"),
         ]
 
     def _nav_btn(self, key: str, icon: str, label: str) -> ft.Container:

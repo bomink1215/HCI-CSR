@@ -1,6 +1,9 @@
 import flet as ft
+import asyncio
 from components.ui import card, accent_btn, ghost_btn, mascot_widget
 from datetime import datetime
+from utils import firebase, session, todo_store, score_store
+from utils.alert_manager import is_monitoring
 
 BG_BASE   = "#FFFFFF"
 BG_CARD   = "#F4F6F8"
@@ -15,11 +18,24 @@ TEXT_MUT  = "#9DA8B7"
 BORDER    = "#E2E6EC"
 FONT      = "DOSSaemmul"
 
-ROW1_H = 250
-ROW2_H = 340
+ROW1_H = 240
+ROW2_H = 260
 
 POMO_LABELS = {"focus": "Focus Session", "rest": "Break Session"}
 POMO_COLORS = {"focus": ACCENT,          "rest": PURPLE}
+
+
+def _fmt_min(minutes: int) -> str:
+    h, m = divmod(minutes, 60)
+    return f"{h}h {m:02d}m" if h else f"{m}m"
+
+_AVATAR_COLORS = [
+    "#00C9A7", "#9B8FFF", "#FF5C5C", "#FFB347",
+    "#34D399", "#60A5FA", "#F472B6", "#A78BFA",
+]
+
+def _avatar_color(nickname: str) -> str:
+    return _AVATAR_COLORS[sum(ord(c) for c in (nickname or "?")) % len(_AVATAR_COLORS)]
 
 
 class DashboardView:
@@ -34,6 +50,21 @@ class DashboardView:
         self.pomo_start_stop_cb = None
         self.pomo_reset_cb      = None
         self.pomo_skip_cb       = None
+        self.dash_rank_col_ref         = ft.Ref()
+        self.dash_rank_posture_col_ref = ft.Ref()
+        self.live_status_ref           = ft.Ref()
+        self.live_dot_ref           = ft.Ref()
+        self.live_text_ref          = ft.Ref()
+        self.todo_col_ref           = ft.Ref()
+        self.todo_count_ref         = ft.Ref()
+        # 점수 관련
+        self.dash_posture_ring_ref  = ft.Ref()
+        self.dash_posture_score_ref = ft.Ref()
+        self.dash_posture_label_ref = ft.Ref()
+        self.dash_focus_bars_ref    = ft.Ref()
+        self.dash_posture_bars_ref  = ft.Ref()
+        self.dash_focus_avg_ref     = ft.Ref()
+        self.dash_posture_avg_ref   = ft.Ref()
 
     def update_pomodoro(self, remaining: int, total: int, mode: str, running: bool):
         mins, secs = remaining // 60, remaining % 60
@@ -70,32 +101,333 @@ class DashboardView:
         except Exception:
             pass
 
-    def _posture_ring(self, score=78) -> ft.Container:
+    # ── 랭킹 카드 실데이터 로드 ─────────────────────────────────────
+    def refresh(self):
+        self._update_live_badge()
+        self._refresh_todo()
+        self._refresh_scores()
+        self.page.run_task(self._load_ranking)
+        todo_store.add_listener(self._refresh_todo)
+        score_store.add_listener(self._refresh_scores)
+
+    def _refresh_todo(self):
+        tasks = todo_store.get_tasks()
+        total = len(tasks)
+
+        # 미완료 우선, 최대 4개 미리보기
+        order = {"High": 0, "Medium": 1, "Low": 2}
+        sorted_tasks = sorted(tasks,
+                              key=lambda t: (t["done"], order.get(t["priority"], 1)))
+        preview = sorted_tasks[:4]
+
+        def _make_task_row(task):
+            done = task["done"]
+            def toggle(_):
+                todo_store.toggle_task(task)
+            return ft.Row(
+                controls=[
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.DONE, size=11,
+                                        color="#FFFFFF" if done else "transparent"),
+                        width=18, height=18, border_radius=5,
+                        border=ft.border.all(1.5, ACCENT if done else BORDER),
+                        bgcolor=ACCENT if done else "transparent",
+                        alignment=ft.Alignment(0, 0),
+                        on_click=toggle,
+                    ),
+                    ft.Text(
+                        task["title"], size=13,
+                        color=TEXT_MUT if done else TEXT_PRI,
+                        font_family=FONT, expand=True,
+                        spans=[ft.TextSpan(style=ft.TextStyle(
+                            decoration=ft.TextDecoration.LINE_THROUGH)
+                        )] if done else [],
+                    ),
+                ],
+                spacing=8,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            )
+
+        rows = [_make_task_row(t) for t in preview]
+
+        if not rows:
+            rows = [ft.Text("No tasks yet!", size=12, color=TEXT_MUT, font_family=FONT)]
+
+        if self.todo_col_ref.current:
+            self.todo_col_ref.current.controls = rows
+            self.todo_col_ref.current.update()
+
+        if self.todo_count_ref.current:
+            label = f"{total} item{'s' if total != 1 else ''}"
+            self.todo_count_ref.current.value = label
+            self.todo_count_ref.current.update()
+
+    def _refresh_scores(self):
+        from datetime import date as _date
+        today_idx    = _date.today().weekday()
+        days         = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        MAX_H, MIN_H = 44, 12
+
+        # ── 오늘 자세 점수 ───────────────────────────────────────────
+        p_score = score_store.get_today_posture()
+        p_color = ACCENT if p_score >= 70 else (WARNING if p_score >= 50 else DANGER)
+
+        if self.dash_posture_ring_ref.current:
+            self.dash_posture_ring_ref.current.value = p_score / 100
+            self.dash_posture_ring_ref.current.color = p_color
+            self.dash_posture_ring_ref.current.update()
+        if self.dash_posture_score_ref.current:
+            self.dash_posture_score_ref.current.value = str(p_score) if p_score else "--"
+            self.dash_posture_score_ref.current.color = p_color
+            self.dash_posture_score_ref.current.update()
+        if self.dash_posture_label_ref.current:
+            lbl = ("Good 👍" if p_score >= 70
+                   else "Fair 😐" if p_score >= 50
+                   else "Poor 😞" if p_score > 0
+                   else "Not measured")
+            self.dash_posture_label_ref.current.value = lbl
+            self.dash_posture_label_ref.current.color = p_color
+            self.dash_posture_label_ref.current.update()
+
+        # ── 주간 바 차트 ─────────────────────────────────────────────
+        focus_vals   = score_store.get_week_focus()
+        posture_vals = score_store.get_week_posture()
+
+        def make_bars(vals, color_fn):
+            bars = []
+            for i, (d, val) in enumerate(zip(days, vals)):
+                is_today = i == today_idx
+                h = 4 if val == 0 else int(MIN_H + (val / 100) * (MAX_H - MIN_H))
+                c = color_fn(val, is_today)
+                bars.append(
+                    ft.Column(
+                        controls=[
+                            ft.Container(
+                                width=22, height=MAX_H,
+                                content=ft.Column(
+                                    controls=[
+                                        ft.Container(expand=True),
+                                        ft.Container(
+                                            width=22, height=h,
+                                            bgcolor=c if is_today else (c + "88" if val > 0 else BORDER),
+                                            border_radius=4,
+                                        ),
+                                    ],
+                                    spacing=0,
+                                ),
+                            ),
+                            ft.Text(d, size=10,
+                                    color=c if is_today else TEXT_MUT,
+                                    font_family=FONT,
+                                    text_align=ft.TextAlign.CENTER),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=16,
+                    )
+                )
+            return bars
+
+        if self.dash_focus_bars_ref.current:
+            self.dash_focus_bars_ref.current.controls = make_bars(
+                focus_vals,
+                lambda v, today: ACCENT,
+            )
+            self.dash_focus_bars_ref.current.update()
+
+        if self.dash_posture_bars_ref.current:
+            self.dash_posture_bars_ref.current.controls = make_bars(
+                posture_vals,
+                lambda v, today: ACCENT if v >= 70 else (WARNING if v >= 50 else DANGER),
+            )
+            self.dash_posture_bars_ref.current.update()
+
+        # ── 평균 라벨 ────────────────────────────────────────────────
+        focus_avg   = score_store.get_weekly_focus_avg_minutes()
+        posture_avg = score_store.get_weekly_posture_avg()
+
+        if self.dash_focus_avg_ref.current:
+            self.dash_focus_avg_ref.current.value = (
+                f"Avg {focus_avg}min" if focus_avg else "No data"
+            )
+            self.dash_focus_avg_ref.current.update()
+        if self.dash_posture_avg_ref.current:
+            self.dash_posture_avg_ref.current.value = (
+                f"Avg {posture_avg}pts" if posture_avg else "No data"
+            )
+            self.dash_posture_avg_ref.current.update()
+
+        try:
+            self.page.update()
+        except Exception:
+            pass
+
+    def _update_live_badge(self):
+        on = is_monitoring()
+        color  = ACCENT    if on else DANGER
+        bg     = ACCENT_LT if on else "#FFF0F0"
+        border = None
+        label  = "Live Detection On" if on else "Live Detection Off"
+        if self.live_dot_ref.current:
+            self.live_dot_ref.current.bgcolor = color
+            self.live_dot_ref.current.update()
+        if self.live_text_ref.current:
+            self.live_text_ref.current.value = label
+            self.live_text_ref.current.color = color
+            self.live_text_ref.current.update()
+        if self.live_status_ref.current:
+            self.live_status_ref.current.bgcolor = bg
+            self.live_status_ref.current.border  = None
+            self.live_status_ref.current.update()
+
+    # ── 이웃 슬라이스: 리스트가 길면 나 ± 1 범위만 반환 ────────────────
+    @staticmethod
+    def _neighbor_slice(ranked: list, my_uid: str, max_n: int = 3) -> list:
+        if len(ranked) <= max_n:
+            return ranked
+        my_i = next((i for i, u in enumerate(ranked) if u.get("uid") == my_uid), -1)
+        if my_i == -1:
+            return ranked[:max_n]
+        if my_i == 0:                        # 1위: 나 + 아래 2명
+            end = min(3, len(ranked))
+            return ranked[0:end]
+        if my_i >= len(ranked) - 1:          # 꼴찌: 위 2명 + 나
+            start = max(0, len(ranked) - 3)
+            return ranked[start:]
+        return ranked[my_i - 1: my_i + 2]   # 일반: 위 1 + 나 + 아래 1
+
+    async def _load_ranking(self):
+        user = session.get_user() or {}
+        if not user.get("id_token"):
+            return
+
+        _loading = ft.Row(
+            controls=[ft.ProgressRing(width=16, height=16, stroke_width=2, color=ACCENT)],
+            alignment=ft.MainAxisAlignment.CENTER,
+        )
+        if self.dash_rank_col_ref.current:
+            self.dash_rank_col_ref.current.controls = [_loading]
+            self.dash_rank_col_ref.current.update()
+        if self.dash_rank_posture_col_ref.current:
+            self.dash_rank_posture_col_ref.current.controls = []
+            self.dash_rank_posture_col_ref.current.update()
+
+        my_uid = user.get("uid", "")
+        friends_coro = asyncio.to_thread(
+            firebase.get_friends_with_stats, user["uid"], user["id_token"]
+        )
+        my_coro = asyncio.to_thread(
+            firebase.get_user_stats, my_uid, user["id_token"]
+        )
+        friends, my_data = await asyncio.gather(friends_coro, my_coro)
+
+        from datetime import date as _date
+        today_str = _date.today().isoformat()
+
+        combined = list(friends)
+        if my_data and not any(f.get("uid") == my_uid for f in combined):
+            combined.append(my_data)
+
+        # ── 집중 시간 랭킹 ────────────────────────────────────────────
+        for u in combined:
+            u["_focus_val"] = (
+                u.get("today_focus_min", 0)
+                if u.get("today_date") == today_str else 0
+            )
+        focus_sorted = sorted(combined, key=lambda x: x["_focus_val"], reverse=True)
+        focus_slice  = self._neighbor_slice(focus_sorted, my_uid)
+
+        medals = ["🥇", "🥈", "🥉"]
+        focus_rows = []
+        for u in focus_slice:
+            rank = focus_sorted.index(u)
+            is_me = u["uid"] == my_uid
+            medal = medals[rank] if rank < 3 else f"#{rank + 1}"
+            focus_rows.append(self._dash_rank_row(
+                medal, u["nickname"],
+                _fmt_min(u["_focus_val"]),
+                _avatar_color(u["nickname"]), is_me,
+            ))
+        if not focus_rows:
+            focus_rows = [ft.Text("Add friends to see rankings!",
+                                  size=11, color=TEXT_MUT, font_family=FONT)]
+
+        if self.dash_rank_col_ref.current:
+            self.dash_rank_col_ref.current.controls = focus_rows
+            self.dash_rank_col_ref.current.update()
+
+        # ── 자세 점수 랭킹 ────────────────────────────────────────────
+        for u in combined:
+            u["_posture_val"] = (
+                u.get("today_posture_score", 0)
+                if u.get("today_posture_date") == today_str else 0
+            )
+        posture_sorted = sorted(combined, key=lambda x: x["_posture_val"], reverse=True)
+        posture_slice  = self._neighbor_slice(posture_sorted, my_uid)
+
+        posture_rows = []
+        for u in posture_slice:
+            rank  = posture_sorted.index(u)
+            is_me = u["uid"] == my_uid
+            medal = medals[rank] if rank < 3 else f"#{rank + 1}"
+            posture_rows.append(self._dash_rank_row(
+                medal, u["nickname"],
+                f"{u['_posture_val']}pts",
+                _avatar_color(u["nickname"]), is_me,
+                accent_color=PURPLE,
+            ))
+        if not posture_rows:
+            posture_rows = [ft.Text("No posture data yet",
+                                    size=11, color=TEXT_MUT, font_family=FONT)]
+
+        if self.dash_rank_posture_col_ref.current:
+            self.dash_rank_posture_col_ref.current.controls = posture_rows
+            self.dash_rank_posture_col_ref.current.update()
+
+    def _dash_rank_row(self, medal: str, name: str, val: str,
+                       color: str, is_me: bool = False,
+                       accent_color: str = ACCENT) -> ft.Row:
+        return ft.Row(
+            controls=[
+                ft.Text(medal, size=13),
+                ft.Container(
+                    content=ft.Text(
+                        name[:1].upper(), size=10,
+                        color="#FFFFFF", font_family=FONT,
+                    ),
+                    width=22, height=22, border_radius=11,
+                    bgcolor=color, alignment=ft.Alignment(0, 0),
+                ),
+                ft.Text(
+                    name, size=12,
+                    color=accent_color if is_me else TEXT_PRI,
+                    font_family=FONT, expand=True,
+                ),
+                ft.Text(val, size=12, color=accent_color if is_me else TEXT_SEC,
+                        font_family=FONT),
+            ],
+            spacing=7,
+        )
+
+    def _posture_ring(self, score=0, ring_ref=None, score_ref=None) -> ft.Container:
         color = ACCENT if score >= 70 else (WARNING if score >= 50 else DANGER)
         return ft.Container(
             width=110, height=110,
             content=ft.Stack(
                 controls=[
                     ft.ProgressRing(
+                        ref=ring_ref,
                         value=score / 100, width=110, height=110,
                         stroke_width=10, color=color, bgcolor=BORDER,
                     ),
                     ft.Container(
                         width=110, height=110,
                         alignment=ft.Alignment(0, 0),
-                        content=ft.Column(
-                            controls=[
-                                ft.Text(str(score), size=26,
-                                        weight=ft.FontWeight.W_500,
-                                        color=color, font_family=FONT,
-                                        text_align=ft.TextAlign.CENTER),
-                                ft.Text("Posture", size=11, color=TEXT_MUT,
-                                        font_family=FONT,
-                                        text_align=ft.TextAlign.CENTER),
-                            ],
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            alignment=ft.MainAxisAlignment.CENTER,
-                            spacing=1,
+                        content=ft.Text(
+                            ref=score_ref,
+                            value=str(score) if score else "--",
+                            size=26, weight=ft.FontWeight.W_500,
+                            color=color, font_family=FONT,
+                            text_align=ft.TextAlign.CENTER,
                         ),
                     ),
                 ],
@@ -103,38 +435,46 @@ class DashboardView:
         )
 
     def _today_tasks(self) -> ft.Column:
-        tasks = [
-            ("Write project proposal", True),
-            ("Prepare team meeting", True),
-            ("Code review", False),
-            ("Documentation work", False),
-        ]
-        rows = []
-        for label, done in tasks:
-            rows.append(
-                ft.Row(
-                    controls=[
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.DONE, size=11, color="#FFFFFF" if done else "transparent"),
-                            width=18, height=18, border_radius=5,
-                            border=ft.border.all(1.5, ACCENT if done else BORDER),
-                            bgcolor=ACCENT if done else "transparent",
-                            alignment=ft.Alignment(0, 0),
-                        ),
-                        ft.Text(
-                            label, size=13,
-                            color=TEXT_MUT if done else TEXT_PRI,
-                            font_family=FONT, expand=True,
-                            spans=[ft.TextSpan(style=ft.TextStyle(
-                                decoration=ft.TextDecoration.LINE_THROUGH)
-                            )] if done else [],
-                        ),
-                    ],
-                    spacing=8,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                )
+        tasks = todo_store.get_tasks()
+        order = {"High": 0, "Medium": 1, "Low": 2}
+        sorted_tasks = sorted(tasks,
+                              key=lambda t: (t["done"], order.get(t["priority"], 1)))
+        preview = sorted_tasks[:4]
+
+        def _make_task_row(task):
+            done = task["done"]
+            def toggle(_):
+                todo_store.toggle_task(task)
+            return ft.Row(
+                controls=[
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.DONE, size=11,
+                                        color="#FFFFFF" if done else "transparent"),
+                        width=18, height=18, border_radius=5,
+                        border=ft.border.all(1.5, ACCENT if done else BORDER),
+                        bgcolor=ACCENT if done else "transparent",
+                        alignment=ft.Alignment(0, 0),
+                        on_click=toggle,
+                    ),
+                    ft.Text(
+                        task["title"], size=13,
+                        color=TEXT_MUT if done else TEXT_PRI,
+                        font_family=FONT, expand=True,
+                        spans=[ft.TextSpan(style=ft.TextStyle(
+                            decoration=ft.TextDecoration.LINE_THROUGH)
+                        )] if done else [],
+                    ),
+                ],
+                spacing=8,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
             )
-        return ft.Column(controls=rows, spacing=7)
+
+        rows = [_make_task_row(t) for t in preview]
+
+        if not rows:
+            rows = [ft.Text("No tasks yet!", size=12, color=TEXT_MUT, font_family=FONT)]
+
+        return ft.Column(ref=self.todo_col_ref, controls=rows, spacing=7)
 
     def build(self) -> ft.Container:
         now = datetime.now()
@@ -181,48 +521,58 @@ class DashboardView:
             content=card(
                 ft.Column(
                     controls=[
-                        ft.Container(expand=1),
                         ft.Row(
                             controls=[
-                                ft.Column(
-                                    controls=[
-                                        ft.Text("Today's Posture", size=11,
-                                                color=TEXT_MUT, font_family=FONT),
-                                        ft.Container(height=6),
-                                        ft.Text("Good 👍", size=20,
-                                                color=ACCENT, font_family=FONT),
-                                        ft.Container(height=4),
-                                        ft.Text("Avg 78pts", size=12,
-                                                color=TEXT_SEC, font_family=FONT),
-                                    ],
-                                    spacing=0, expand=True,
-                                    alignment=ft.MainAxisAlignment.CENTER,
-                                ),
-                                self._posture_ring(78),
+                                ft.Text("Today's Posture", size=13,
+                                        color=TEXT_PRI, font_family=FONT),
                             ],
-                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                            spacing=8,
+                            alignment=ft.MainAxisAlignment.START,
                         ),
-                        ft.Container(expand=1),
+                        ft.Container(expand=True),
+                        ft.Row(
+                            controls=[self._posture_ring(0,
+                                ring_ref=self.dash_posture_ring_ref,
+                                score_ref=self.dash_posture_score_ref)],
+                            alignment=ft.MainAxisAlignment.CENTER,
+                        ),
+                        ft.Container(height=12),
+                        ft.Row(
+                            controls=[
+                                ft.Text(
+                                    ref=self.dash_posture_label_ref,
+                                    value="Not measured", size=18,
+                                    color=TEXT_MUT, font_family=FONT),
+                            ],
+                            alignment=ft.MainAxisAlignment.CENTER,
+                        ),
+                        ft.Container(expand=True),
                         ft.Container(
+                            ref=self.live_status_ref,
                             content=ft.Row(
                                 controls=[
-                                    ft.Container(width=6, height=6,
-                                                 bgcolor=ACCENT, border_radius=3),
-                                    ft.Text("Live Detection On", size=10,
-                                            color=ACCENT, font_family=FONT),
+                                    ft.Container(
+                                        ref=self.live_dot_ref,
+                                        width=6, height=6,
+                                        bgcolor=DANGER, border_radius=3,
+                                    ),
+                                    ft.Text(
+                                        ref=self.live_text_ref,
+                                        value="Live Detection Off",
+                                        size=10, color=DANGER, font_family=FONT,
+                                    ),
                                 ],
                                 spacing=5,
                             ),
-                            bgcolor=ACCENT_LT, border_radius=6,
+                            bgcolor="#FFF0F0", border_radius=6,
                             padding=ft.padding.only(left=10, top=5, right=10, bottom=5),
-                            border=ft.border.all(1, ACCENT + "40"),
                         ),
                     ],
                     spacing=0,
                 ),
                 padding=14,
+                expand=True,
             ),
+            on_click=lambda _: self.navigate("posture"),
             height=ROW1_H, expand=1,
         )
 
@@ -235,8 +585,11 @@ class DashboardView:
                                 ft.Text("Today's Tasks", size=13,
                                         color=TEXT_PRI, font_family=FONT),
                                 ft.Container(
-                                    content=ft.Text("4 items", size=11, color=ACCENT,
-                                                    font_family=FONT),
+                                    content=ft.Text(
+                                        ref=self.todo_count_ref,
+                                        value=f"{len(todo_store.get_tasks())} item{'s' if len(todo_store.get_tasks()) != 1 else ''}",
+                                        size=11, color=ACCENT, font_family=FONT,
+                                    ),
                                     bgcolor=ACCENT_LT, border_radius=8,
                                     padding=ft.padding.only(left=7, top=2, right=7, bottom=2),
                                 ),
@@ -292,7 +645,7 @@ class DashboardView:
                                     ft.ProgressRing(
                                         ref=self.pomo_ring_ref,
                                         value=1.0, width=RING_SZ, height=RING_SZ,
-                                        stroke_width=8, color=ACCENT, bgcolor=BORDER,
+                                        stroke_width=10, color=ACCENT, bgcolor=BORDER,
                                     ),
                                     ft.Container(
                                         width=RING_SZ, height=RING_SZ,
@@ -345,6 +698,7 @@ class DashboardView:
                     spacing=0,
                 ),
                 padding=14,
+                expand=True,
             ),
             on_click=lambda _: self.navigate("pomodoro"),
             height=ROW1_H, expand=1,
@@ -363,9 +717,9 @@ class DashboardView:
 
         # ── Row 2: Charts / Ranking ──────────────────────────────────
         days         = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        focus_vals   = [85, 92, 67, 88, 95, 40, 0]
-        posture_vals = [78, 88, 70, 82, 91, 55, 0]
-        MAX_H = 52
+        focus_vals   = [0] * 7
+        posture_vals = [0] * 7
+        MAX_H = 44
         MIN_H = 12
 
         def _bar_col(d, val, color, is_today):
@@ -386,10 +740,6 @@ class DashboardView:
                                     bgcolor=color if is_today
                                             else (color + "88" if val > 0 else BORDER),
                                     border_radius=4,
-                                    shadow=ft.BoxShadow(
-                                        blur_radius=4, color=color + "44",
-                                        offset=ft.Offset(0, 2)
-                                    ) if is_today else None,
                                 ),
                             ],
                             spacing=0,
@@ -416,7 +766,7 @@ class DashboardView:
 
         CHART_H = (ROW2_H - 10) // 2 - 20
 
-        def _chart(title, avg, bars):
+        def _chart(title, avg, bars, row_ref=None, avg_ref=None):
             return ft.Container(
                 content=card(
                     ft.Column(
@@ -425,8 +775,10 @@ class DashboardView:
                                 controls=[
                                     ft.Text(title, size=13, color=TEXT_PRI, font_family=FONT),
                                     ft.Container(
-                                        content=ft.Text(avg, size=11, color=ACCENT,
-                                                        font_family=FONT),
+                                        content=ft.Text(
+                                            ref=avg_ref,
+                                            value=avg, size=11, color=ACCENT,
+                                            font_family=FONT),
                                         bgcolor=ACCENT_LT, border_radius=6,
                                         padding=ft.padding.only(left=8, top=3, right=8, bottom=3),
                                     ),
@@ -436,6 +788,7 @@ class DashboardView:
                             ft.Container(height=8),
                             ft.Container(
                                 content=ft.Row(
+                                    ref=row_ref,
                                     controls=bars,
                                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                                 ),
@@ -453,59 +806,96 @@ class DashboardView:
         charts_col = ft.Container(
             content=ft.Column(
                 controls=[
-                    _chart("Weekly Focus Score",   "Avg 78pts", focus_bars),
+                    _chart("Weekly Focus Score",   "No data", focus_bars,
+                           row_ref=self.dash_focus_bars_ref,
+                           avg_ref=self.dash_focus_avg_ref),
                     ft.Container(height=10),
-                    _chart("Weekly Posture Score", "Avg 81pts", posture_bars),
+                    _chart("Weekly Posture Score", "No data", posture_bars,
+                           row_ref=self.dash_posture_bars_ref,
+                           avg_ref=self.dash_posture_avg_ref),
                 ],
                 spacing=0,
             ),
-            height=ROW2_H, expand=2,
+            height=310, expand=2,
         )
-
-        def _rank_row(medal, name, val, color):
-            return ft.Row(
-                controls=[
-                    ft.Text(medal, size=13),
-                    ft.Container(
-                        content=ft.Text(name[0], size=10, color="#FFFFFF",
-                                        font_family=FONT),
-                        width=22, height=22, border_radius=11,
-                        bgcolor=color, alignment=ft.Alignment(0, 0),
-                    ),
-                    ft.Text(name, size=12, color=TEXT_PRI,
-                            font_family=FONT, expand=True),
-                    ft.Text(val, size=12, color=color, font_family=FONT),
-                ],
-                spacing=7,
-            )
 
         rank_card = ft.Container(
             content=card(
                 ft.Column(
                     controls=[
-                        ft.Text("Friend Ranking", size=13, color=TEXT_PRI, font_family=FONT),
-                        ft.Container(height=4),
-                        ft.Text("⏱ Focus Ranking", size=11, color=TEXT_SEC, font_family=FONT),
+                        # ── 헤더 ────────────────────────────────────
+                        ft.Row(
+                            controls=[
+                                ft.Text("Ranking", size=13, color=TEXT_PRI, font_family=FONT),
+                                ft.Container(
+                                    content=ft.Text("Live", size=10, color=ACCENT,
+                                                    font_family=FONT),
+                                    bgcolor=ACCENT_LT, border_radius=6,
+                                    padding=ft.padding.only(left=6, top=2, right=6, bottom=2),
+                                    border=ft.border.all(1, ACCENT + "40"),
+                                ),
+                            ],
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        ),
                         ft.Container(height=2),
-                        _rank_row("🥇", "Chulsoo K.", "4h 32m", ACCENT),
-                        _rank_row("🥈", "Younghee L.", "3h 55m", PURPLE),
-                        _rank_row("🥉", "Me",          "3h 20m", DANGER),
-                        ft.Divider(color=BORDER, height=8),
-                        ft.Text("🧘 Posture Ranking", size=11, color=TEXT_SEC, font_family=FONT),
-                        ft.Container(height=2),
-                        _rank_row("🥇", "Sohee H.", "91pts", "#34D399"),
-                        _rank_row("🥈", "Chulsoo K.", "88pts", ACCENT),
-                        _rank_row("🥉", "Younghee L.", "85pts", PURPLE),
-                        ft.Container(expand=True),
+                        # ── 두 섹션 동등 분할 (각 50%) ─────────────
+                        ft.Column(
+                            controls=[
+                                # 집중 시간 섹션
+                                ft.Container(
+                                    expand=1,
+                                    content=ft.Column(
+                                        controls=[
+                                            ft.Text("⏱ Focus Time", size=11,
+                                                    color=TEXT_SEC, font_family=FONT),
+                                            ft.Container(height=2),
+                                            ft.Column(
+                                                ref=self.dash_rank_col_ref,
+                                                controls=[ft.Row(
+                                                    controls=[ft.ProgressRing(
+                                                        width=16, height=16,
+                                                        stroke_width=2, color=ACCENT,
+                                                    )],
+                                                    alignment=ft.MainAxisAlignment.CENTER,
+                                                )],
+                                                spacing=3,
+                                            ),
+                                        ],
+                                        spacing=0,
+                                    ),
+                                ),
+                                ft.Divider(color=BORDER, height=1),
+                                # 자세 점수 섹션
+                                ft.Container(
+                                    expand=1,
+                                    content=ft.Column(
+                                        controls=[
+                                            ft.Text("🧘 Posture", size=11,
+                                                    color=TEXT_SEC, font_family=FONT),
+                                            ft.Container(height=2),
+                                            ft.Column(
+                                                ref=self.dash_rank_posture_col_ref,
+                                                controls=[],
+                                                spacing=3,
+                                            ),
+                                        ],
+                                        spacing=0,
+                                    ),
+                                ),
+                            ],
+                            spacing=2,
+                            expand=True,
+                        ),
                         ghost_btn("View All",
                                   on_click=lambda _: self.navigate("ranking"),
                                   icon=ft.Icons.ARROW_FORWARD),
                     ],
-                    spacing=4,
+                    spacing=2,
+                    expand=True,
                 ),
                 padding=14,
             ),
-            height=ROW2_H, expand=1,
+            height=310, expand=1,
         )
 
         row2 = ft.Row(
@@ -521,15 +911,15 @@ class DashboardView:
             content=ft.Column(
                 controls=[
                     header,
-                    ft.Container(height=10),
+                    ft.Container(height=8),
                     row1,
-                    ft.Container(height=10),
+                    ft.Container(height=8),
                     row2,
                 ],
                 spacing=0,
                 scroll=ft.ScrollMode.AUTO,
             ),
             expand=True,
-            padding=ft.padding.only(left=22, top=14, right=22, bottom=14),
+            padding=ft.padding.only(left=22, top=12, right=22, bottom=12),
             bgcolor=BG_BASE,
         )

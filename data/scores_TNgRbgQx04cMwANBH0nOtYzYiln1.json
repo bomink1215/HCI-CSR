@@ -1,0 +1,27 @@
+{
+  "2026-05-29": {
+    "posture_scores": [],
+    "focus_minutes": 2,
+    "synced_minutes": 2,
+    "history": [
+      {
+        "mode": "Focus",
+        "start": "16:55",
+        "end": "16:55",
+        "status": "Done"
+      },
+      {
+        "mode": "Break",
+        "start": "16:55",
+        "end": "16:55",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "16:55",
+        "end": "16:56",
+        "status": "Done"
+      }
+    ]
+  }
+}

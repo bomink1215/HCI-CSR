@@ -5,7 +5,7 @@ import time
 import os
 import tempfile
 import statistics
-from utils import alert_manager
+from utils import alert_manager, score_store
 
 BG_BASE   = "#FFFFFF"
 BG_CARD   = "#F4F6F8"
@@ -151,6 +151,7 @@ class PostureView:
         self.ring_ref       = ft.Ref()
         self.cam_dot_ref    = ft.Ref()
         self.cam_label_ref  = ft.Ref()
+        self.cam_badge_ref  = ft.Ref()
         self.issue_col_ref  = ft.Ref()
         self.fps_ref        = ft.Ref()
         self.toggle_btn_ref = ft.Ref()
@@ -426,6 +427,7 @@ class PostureView:
                 pass
 
     def _update_score_ui(self, score: int, issues: list, fps: int):
+        score_store.record_posture(score)
         color = ACCENT if score >= 70 else (WARNING if score >= 50 else DANGER)
         try:
             if self.score_ref.current:
@@ -468,9 +470,14 @@ class PostureView:
         try:
             if self.cam_dot_ref.current:
                 self.cam_dot_ref.current.bgcolor = ACCENT if on else DANGER
+                self.cam_dot_ref.current.update()
             if self.cam_label_ref.current:
-                self.cam_label_ref.current.value = "Camera On" if on else "Camera Off"
+                self.cam_label_ref.current.value = "Live Detection On" if on else "Live Detection Off"
                 self.cam_label_ref.current.color = ACCENT if on else DANGER
+                self.cam_label_ref.current.update()
+            if self.cam_badge_ref.current:
+                self.cam_badge_ref.current.bgcolor = ACCENT_LT if on else "#FFF0F0"
+                self.cam_badge_ref.current.update()
             self.page.update()
         except Exception:
             pass
@@ -586,32 +593,54 @@ class PostureView:
                             size=14, color=TEXT_MUT, font_family="DOSSaemmul",
                             text_align=ft.TextAlign.CENTER),
                     ft.Container(height=8),
+                    ft.Row(
+                        controls=[
+                            ft.Container(
+                                ref=self.cam_badge_ref,
+                                content=ft.Row(
+                                    controls=[
+                                        ft.Container(ref=self.cam_dot_ref,
+                                                     width=6, height=6, bgcolor=DANGER,
+                                                     border_radius=3),
+                                        ft.Text(ref=self.cam_label_ref,
+                                                value="Live Detection Off", size=10,
+                                                color=DANGER, font_family="DOSSaemmul"),
+                                    ],
+                                    spacing=5,
+                                ),
+                                bgcolor="#FFF0F0", border_radius=6,
+                                padding=ft.padding.only(left=10, top=5, right=10, bottom=5),
+                            ),
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                    ),
+                    ft.Text(ref=self.fps_ref, value="",
+                            size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
+                    ft.Container(height=4),
                     ft.Container(
                         content=ft.Row(
                             controls=[
-                                ft.Container(ref=self.cam_dot_ref,
-                                             width=8, height=8, bgcolor=DANGER,
-                                             border_radius=4),
-                                ft.Text(ref=self.cam_label_ref,
-                                        value="Camera Off", size=12,
-                                        color=DANGER, font_family="DOSSaemmul"),
-                                ft.Container(expand=True),
-                                ft.Text(ref=self.fps_ref, value="",
-                                        size=11, color=TEXT_MUT,
-                                        font_family="DOSSaemmul"),
+                                ft.Icon(ft.Icons.PLAY_ARROW, size=18, color="#FFFFFF"),
+                                ft.Text("Start Monitoring", size=14,
+                                        weight=ft.FontWeight.W_400,
+                                        color="#FFFFFF", font_family="DOSSaemmul"),
                             ],
-                            spacing=6,
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            spacing=8,
                         ),
-                        bgcolor=BG_CARD2, border_radius=8,
-                        padding=ft.padding.only(left=12, top=8, right=12, bottom=8),
-                        border=ft.border.all(1, BORDER),
+                        bgcolor=ACCENT, border_radius=12,
+                        width=220,
+                        padding=ft.padding.only(left=20, top=12, right=20, bottom=12),
+                        on_click=self._toggle,
+                        shadow=ft.BoxShadow(blur_radius=12, color=ACCENT + "55",
+                                            offset=ft.Offset(0, 4)),
                     ),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
                 spacing=8,
             ),
-            height=220,
+            expand=True,
             bgcolor=BG_CARD, border_radius=16,
             border=ft.border.all(1, BORDER),
             alignment=ft.Alignment(0, 0),
@@ -647,7 +676,7 @@ class PostureView:
                         controls=[
                             ft.Text("Live Score", size=14, weight=ft.FontWeight.W_400,
                                     color=TEXT_PRI, font_family="DOSSaemmul"),
-                            ft.Container(height=14),
+                            ft.Container(expand=True),
                             ft.Container(content=self._score_ring(),
                                          alignment=ft.Alignment(0, 0)),
                             ft.Container(height=10),
@@ -658,57 +687,54 @@ class PostureView:
                                     text_align=ft.TextAlign.CENTER),
                             ft.Container(height=4),
                             issue_col,
+                            ft.Container(expand=True),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        expand=True,
                     ),
+                    expand=True,
                 ),
                 ft.Container(height=10),
                 calib_card,
-                ft.Container(height=10),
-                ft.Container(
-                    content=ft.Row(
-                        controls=[
-                            ft.Icon(ft.Icons.PLAY_ARROW, size=18, color="#FFFFFF"),
-                            ft.Text("Start Monitoring", size=14, weight=ft.FontWeight.W_400,
-                                    color="#FFFFFF", font_family="DOSSaemmul"),
-                        ],
-                        alignment=ft.MainAxisAlignment.CENTER,
-                        spacing=8,
-                    ),
-                    bgcolor=ACCENT, border_radius=12,
-                    padding=ft.padding.only(top=14, bottom=14),
-                    on_click=self._toggle,
-                    shadow=ft.BoxShadow(blur_radius=12, color=ACCENT + "55",
-                                        offset=ft.Offset(0, 4)),
-                ),
             ],
             width=240, spacing=0,
         )
 
         main_area = ft.Column(
             controls=[
-                ft.Column(controls=[
-                    ft.Text("Posture Correction", size=26, weight=ft.FontWeight.W_400,
-                            color=TEXT_PRI, font_family="DOSSaemmul"),
-                    ft.Text("Hold good posture for 3s at start → real-time comparison",
-                            size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
-                ], spacing=2),
-                ft.Container(height=12),
                 model_warning,
-                ft.Container(height=4),
+                ft.Container(height=4, visible=model_path is None),
                 preview_box,
             ],
             expand=True, spacing=0,
-            scroll=ft.ScrollMode.AUTO,
         )
 
+        BODY_H = 580
+
         return ft.Container(
-            content=ft.Row(
-                controls=[main_area, ft.Container(width=20), right_panel],
-                vertical_alignment=ft.CrossAxisAlignment.START,
+            content=ft.Column(
+                controls=[
+                    ft.Column(
+                        controls=[
+                            ft.Text("Posture Correction", size=26, weight=ft.FontWeight.W_400,
+                                    color=TEXT_PRI, font_family="DOSSaemmul"),
+                            ft.Text("Track and improve your posture with real-time AI detection",
+                                    size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
+                        ],
+                        spacing=2,
+                    ),
+                    ft.Container(height=12),
+                    ft.Row(
+                        controls=[main_area, ft.Container(width=20), right_panel],
+                        height=BODY_H,
+                        vertical_alignment=ft.CrossAxisAlignment.STRETCH,
+                    ),
+                ],
+                spacing=0,
                 expand=True,
+                scroll=ft.ScrollMode.AUTO,
             ),
             expand=True,
-            padding=ft.padding.only(left=28, top=24, right=28, bottom=24),
+            padding=ft.padding.only(left=28, top=18, right=28, bottom=18),
             bgcolor=BG_BASE,
         )
