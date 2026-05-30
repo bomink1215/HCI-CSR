@@ -53,7 +53,8 @@ def _do_refresh(refresh_fn) -> bool:
             if "refresh_token" in result:
                 user["refresh_token"] = result["refresh_token"]
             set_user(user)
-            save(user)
+            if user.get("remember_me"):
+                save(user)
             return True
     except Exception:
         pass

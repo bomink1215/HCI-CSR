@@ -107,7 +107,7 @@ def _calc_score(feat: dict) -> tuple:
         d = min(int(excess * 350), 45)
         score -= d
         ded[POSTURE_SLOUCH] += d
-        issues.append("Posture collapsing — push hips deep into the chair")
+        issues.append("Posture collapsing - push hips into chair")
 
     ROUNDED_MARGIN = 0.10
     if zoom > ROUNDED_MARGIN and ded[POSTURE_SLOUCH] == 0:
@@ -115,7 +115,7 @@ def _calc_score(feat: dict) -> tuple:
         d = min(int(excess * 280), 40)
         score -= d
         ded[POSTURE_ROUNDED] += d
-        issues.append("Back rounded — straighten up and pull shoulders back")
+        issues.append("Back rounded - pull shoulders back")
 
     TILT_MARGIN = 0.12
     if base_tilt is not None and feat.get("tilt_raw") is not None:
@@ -126,14 +126,14 @@ def _calc_score(feat: dict) -> tuple:
             score -= d
             ded[POSTURE_TILT] += d
             side = feat.get("tilt_side", "One")
-            issues.append(f"Shoulders tilted — raise your {side.lower()} shoulder")
+            issues.append(f"Shoulders tilted - raise {side.lower()} shoulder")
 
     score = max(0, min(100, score))
     posture_type = POSTURE_OK
     if any(v > 0 for v in ded.values()):
         posture_type = max(ded, key=ded.get)
     if not issues:
-        issues.append("Great posture! Keep it up 👍")
+        issues.append("Great posture! Keep it up :)")
 
     dbg["ded"] = dict(ded)
     return score, issues, posture_type, ded, dbg
@@ -226,7 +226,7 @@ class PostureView:
             elif phase == "collect":
                 remaining = COLLECT - elapsed
                 bar_w = int((elapsed / COLLECT) * (w - 60))
-                cv2.putText(frame, "Hold still — recording baseline",
+                cv2.putText(frame, "Hold still - recording baseline",
                             (w//2 - 200, h//2 - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,201,167), 2, cv2.LINE_AA)
                 cv2.rectangle(frame, (30, h//2 + 20), (w-30, h//2 + 44), (220,224,230), -1)
@@ -314,7 +314,7 @@ class PostureView:
         alert_manager.set_monitoring(True)
 
         import cv2 as _cv2
-        win_name   = "ZZOOK — Posture Analysis (Q: quit)"
+        win_name   = "ZZOOK - Posture Analysis (Q: quit)"
         start_time = time.time()
         _cv2.namedWindow(win_name, _cv2.WINDOW_NORMAL)
         _cv2.resizeWindow(win_name, 800, 600)
@@ -332,11 +332,13 @@ class PostureView:
             return
 
         SKEL_CONNS = [(11,12),(11,13),(13,15),(12,14),(14,16)]
+        EMA_ALPHA  = 0.2
 
-        fps_timer = time.time()
-        fps_count = 0
-        score     = 100
-        issues    = ["Great posture! Keep it up 👍"]
+        fps_timer  = time.time()
+        fps_count  = 0
+        score      = 100
+        ema_score  = 100.0
+        issues     = ["Great posture! Keep it up :)"]
 
         try:
             while self.monitoring:
@@ -362,7 +364,9 @@ class PostureView:
                     lm   = result.pose_landmarks[0]
                     feat = _extract_features(lm)
                     if feat:
-                        score, issues, posture_type, ded, dbg = _calc_score(feat)
+                        raw_score, issues, posture_type, ded, dbg = _calc_score(feat)
+                        ema_score = EMA_ALPHA * raw_score + (1 - EMA_ALPHA) * ema_score
+                        score     = round(ema_score)
                         alert_manager.set_score(score)
                         alert_manager.set_posture_type(posture_type)
 
@@ -428,67 +432,83 @@ class PostureView:
 
     def _update_score_ui(self, score: int, issues: list, fps: int):
         score_store.record_posture(score)
-        color = ACCENT if score >= 70 else (WARNING if score >= 50 else DANGER)
-        try:
-            if self.score_ref.current:
-                self.score_ref.current.value = str(score)
-                self.score_ref.current.color = color
-            if self.ring_ref.current:
-                self.ring_ref.current.value = score / 100
-                self.ring_ref.current.color = color
-            if self.status_ref.current:
-                self.status_ref.current.value = issues[0] if issues else ""
-                self.status_ref.current.color = color
-            if self.fps_ref.current:
-                self.fps_ref.current.value = f"{fps} FPS"
-            if self.issue_col_ref.current:
-                self.issue_col_ref.current.controls = [
-                    ft.Text(f"• {i}", size=11, color=DANGER, font_family="DOSSaemmul")
-                    for i in issues[1:]
-                ]
-            self.page.update()
-        except Exception:
-            pass
+
+        async def _do():
+            color = ACCENT if score >= 70 else (WARNING if score >= 50 else DANGER)
+            try:
+                if self.score_ref.current:
+                    self.score_ref.current.value = str(score)
+                    self.score_ref.current.color = color
+                    self.score_ref.current.update()
+                if self.ring_ref.current:
+                    self.ring_ref.current.value = score / 100
+                    self.ring_ref.current.color = color
+                    self.ring_ref.current.update()
+                if self.status_ref.current:
+                    self.status_ref.current.value = issues[0] if issues else ""
+                    self.status_ref.current.color = color
+                    self.status_ref.current.update()
+                if self.fps_ref.current:
+                    self.fps_ref.current.value = f"{fps} FPS"
+                    self.fps_ref.current.update()
+                if self.issue_col_ref.current:
+                    self.issue_col_ref.current.controls = [
+                        ft.Text(f"• {i}", size=11, color=DANGER, font_family="DOSSaemmul")
+                        for i in issues[1:]
+                    ]
+                    self.issue_col_ref.current.update()
+            except Exception:
+                pass
+
+        self.page.run_task(_do)
 
     def _reset_score_ui(self):
-        try:
-            if self.score_ref.current:
-                self.score_ref.current.value = "--"
-                self.score_ref.current.color = ACCENT
-            if self.ring_ref.current:
-                self.ring_ref.current.value = 0
-                self.ring_ref.current.color = ACCENT
-            if self.fps_ref.current:
-                self.fps_ref.current.value = ""
-            if self.issue_col_ref.current:
-                self.issue_col_ref.current.controls = []
-            self.page.update()
-        except Exception:
-            pass
+        async def _do():
+            try:
+                if self.score_ref.current:
+                    self.score_ref.current.value = "--"
+                    self.score_ref.current.color = ACCENT
+                    self.score_ref.current.update()
+                if self.ring_ref.current:
+                    self.ring_ref.current.value = 0
+                    self.ring_ref.current.color = ACCENT
+                    self.ring_ref.current.update()
+                if self.fps_ref.current:
+                    self.fps_ref.current.value = ""
+                    self.fps_ref.current.update()
+                if self.issue_col_ref.current:
+                    self.issue_col_ref.current.controls = []
+                    self.issue_col_ref.current.update()
+            except Exception:
+                pass
+        self.page.run_task(_do)
 
     def _set_cam_on(self, on: bool):
-        try:
-            if self.cam_dot_ref.current:
-                self.cam_dot_ref.current.bgcolor = ACCENT if on else DANGER
-                self.cam_dot_ref.current.update()
-            if self.cam_label_ref.current:
-                self.cam_label_ref.current.value = "Live Detection On" if on else "Live Detection Off"
-                self.cam_label_ref.current.color = ACCENT if on else DANGER
-                self.cam_label_ref.current.update()
-            if self.cam_badge_ref.current:
-                self.cam_badge_ref.current.bgcolor = ACCENT_LT if on else "#FFF0F0"
-                self.cam_badge_ref.current.update()
-            self.page.update()
-        except Exception:
-            pass
+        async def _do():
+            try:
+                if self.cam_dot_ref.current:
+                    self.cam_dot_ref.current.bgcolor = ACCENT if on else DANGER
+                    self.cam_dot_ref.current.update()
+                if self.cam_label_ref.current:
+                    self.cam_label_ref.current.value = "Live Detection On" if on else "Live Detection Off"
+                    self.cam_label_ref.current.color = ACCENT if on else DANGER
+                    self.cam_label_ref.current.update()
+                if self.cam_badge_ref.current:
+                    self.cam_badge_ref.current.bgcolor = ACCENT_LT if on else "#FFF0F0"
+                    self.cam_badge_ref.current.update()
+            except Exception:
+                pass
+        self.page.run_task(_do)
 
     def _set_status(self, msg: str):
-        try:
-            if self.status_ref.current:
-                self.status_ref.current.value = msg
-                self.page.update()
-        except Exception:
-            pass
+        async def _do():
+            try:
+                if self.status_ref.current:
+                    self.status_ref.current.value = msg
+                    self.status_ref.current.update()
+            except Exception:
+                pass
+        self.page.run_task(_do)
 
     def _set_calib_done(self, done: bool):
         try:

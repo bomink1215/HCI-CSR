@@ -1,0 +1,19 @@
+{
+  "2026-05-29": {
+    "posture_scores": [
+      100,
+      60
+    ],
+    "focus_minutes": 0,
+    "synced_minutes": 0,
+    "history": []
+  },
+  "2026-05-30": {
+    "posture_scores": [
+      98
+    ],
+    "focus_minutes": 0,
+    "synced_minutes": 0,
+    "history": []
+  }
+}

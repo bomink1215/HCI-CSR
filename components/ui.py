@@ -127,7 +127,25 @@ def stat_chip(label: str, value: str, color: str = ACCENT) -> ft.Container:
 
 
 def mascot_widget(size: int = 64) -> ft.Container:
-    """Pixel-art mascot — pure Flet Container blocks"""
+    """Mascot image widget — uses assets/mascot.png"""
+    import os
+    img_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "assets", "mascot.png"
+    )
+    if os.path.exists(img_path):
+        return ft.Container(
+            content=ft.Image(
+                src=img_path,
+                width=size,
+                height=size,
+                fit="contain",
+            ),
+            width=size,
+            height=size,
+            alignment=ft.Alignment(0, 0),
+        )
+
+    # fallback — pixel-art robot
     s = size / 64
 
     def px(w, h, color, radius=0):

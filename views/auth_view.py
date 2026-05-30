@@ -31,6 +31,7 @@ class AuthView:
         self.submit_text_ref        = ft.Ref()
         self.submit_btn_ref         = ft.Ref()
         self.nickname_verified      = False   # 중복확인 통과 여부
+        self.remember_me_ref     = ft.Ref()
         self.loading_ref         = ft.Ref()
         self.tab_login_ref       = ft.Ref()
         self.tab_signup_ref      = ft.Ref()
@@ -157,6 +158,11 @@ class AuthView:
                 if "error" in result:
                     self._set_error(result["error"])
                 else:
+                    result["remember_me"] = bool(
+                        self.mode == "login"
+                        and self.remember_me_ref.current
+                        and self.remember_me_ref.current.value
+                    )
                     self.on_login_success(result)
             except Exception:
                 self._set_error("Network error")
@@ -313,7 +319,21 @@ class AuthView:
                         _field(self.username_ref, "ID", ft.Icons.PERSON_OUTLINE),
                         ft.Container(height=10),
                         _field(self.password_ref, "Password", ft.Icons.LOCK_OUTLINE, password=True),
-                        ft.Container(height=10),
+                        ft.Container(height=6),
+                        # Remember me (로그인 전용)
+                        ft.Checkbox(
+                            ref=self.remember_me_ref,
+                            label="Remember me on this device",
+                            label_style=ft.TextStyle(
+                                size=12, color=TEXT_MUT, font_family=FONT,
+                            ),
+                            fill_color={
+                                ft.ControlState.SELECTED: ACCENT,
+                                ft.ControlState.DEFAULT: TEXT_MUT,
+                            },
+                            value=False,
+                        ),
+                        ft.Container(height=4),
                         # 닉네임 (회원가입 전용)
                         ft.Container(
                             ref=self.nickname_wrap_ref,

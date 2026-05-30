@@ -49,8 +49,13 @@ def main(page: ft.Page):
         page.update()
 
     def show_main(user: dict):
-        session.save(user)
+        remember_me = user.pop("remember_me", False)
         session.set_user(user)
+        if remember_me:
+            user["remember_me"] = True
+            session.save(user)
+        else:
+            session.clear()
         score_store.init_for_user(user["uid"])          # UID별 로컬 데이터 전환
         todo_store.init_for_user(user["uid"])           # UID별 투두 데이터 전환
         session.start_auto_refresh(firebase.refresh_id_token)  # 토큰 자동 갱신
@@ -58,9 +63,9 @@ def main(page: ft.Page):
         _build_main(page, show_auth)
         page.update()
 
-    # Check for saved session
+    # Check for saved session (only auto-login if remember_me is set)
     saved = session.load()
-    if saved:
+    if saved and saved.get("remember_me"):
         session.set_user(saved)
         score_store.init_for_user(saved["uid"])         # UID별 로컬 데이터 전환
         todo_store.init_for_user(saved["uid"])          # UID별 투두 데이터 전환
