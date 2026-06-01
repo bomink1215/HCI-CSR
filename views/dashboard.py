@@ -266,7 +266,7 @@ class DashboardView:
         color  = ACCENT    if on else DANGER
         bg     = ACCENT_LT if on else "#FFF0F0"
         border = None
-        label  = "Live Detection On" if on else "Live Detection Off"
+        label  = "Camera ON" if on else "Camera OFF"
         if self.live_dot_ref.current:
             self.live_dot_ref.current.bgcolor = color
             self.live_dot_ref.current.update()
@@ -521,58 +521,66 @@ class DashboardView:
             content=card(
                 ft.Column(
                     controls=[
-                        ft.Row(
-                            controls=[
-                                ft.Text("Today's Posture", size=13,
-                                        color=TEXT_PRI, font_family=FONT),
-                            ],
-                            alignment=ft.MainAxisAlignment.START,
-                        ),
+                        ft.Text("Today's Posture", size=13,
+                                color=TEXT_PRI, font_family=FONT),
                         ft.Container(expand=True),
                         ft.Row(
-                            controls=[self._posture_ring(0,
-                                ring_ref=self.dash_posture_ring_ref,
-                                score_ref=self.dash_posture_score_ref)],
-                            alignment=ft.MainAxisAlignment.CENTER,
-                        ),
-                        ft.Container(height=12),
-                        ft.Row(
                             controls=[
-                                ft.Text(
-                                    ref=self.dash_posture_label_ref,
-                                    value="Not measured", size=18,
-                                    color=TEXT_MUT, font_family=FONT),
+                                self._posture_ring(0,
+                                    ring_ref=self.dash_posture_ring_ref,
+                                    score_ref=self.dash_posture_score_ref),
+                                ft.Container(width=8),
+                                ft.Column(
+                                    controls=[
+                                        ft.Text(
+                                            ref=self.dash_posture_label_ref,
+                                            value="Not measured", size=20,
+                                            color=TEXT_MUT, font_family=FONT),
+                                        ft.Container(height=6),
+                                        ft.Container(
+                                            ref=self.live_status_ref,
+                                            content=ft.Column(
+                                                controls=[
+                                                    ft.Row(
+                                                        controls=[
+                                                            ft.Container(
+                                                                ref=self.live_dot_ref,
+                                                                width=6, height=6,
+                                                                bgcolor=DANGER, border_radius=3,
+                                                            ),
+                                                            ft.Text(
+                                                                ref=self.live_text_ref,
+                                                                value="Camera OFF",
+                                                                size=9, color=DANGER,
+                                                                font_family=FONT,
+                                                            ),
+                                                        ],
+                                                        spacing=5,
+                                                    ),
+                                                ],
+                                                spacing=0,
+                                            ),
+                                            bgcolor="#FFF0F0", border_radius=6,
+                                            padding=ft.padding.only(
+                                                left=8, top=4, right=8, bottom=4),
+                                        ),
+                                    ],
+                                    spacing=0,
+                                    expand=True,
+                                ),
                             ],
-                            alignment=ft.MainAxisAlignment.CENTER,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
                         ft.Container(expand=True),
-                        ft.Container(
-                            ref=self.live_status_ref,
-                            content=ft.Row(
-                                controls=[
-                                    ft.Container(
-                                        ref=self.live_dot_ref,
-                                        width=6, height=6,
-                                        bgcolor=DANGER, border_radius=3,
-                                    ),
-                                    ft.Text(
-                                        ref=self.live_text_ref,
-                                        value="Live Detection Off",
-                                        size=10, color=DANGER, font_family=FONT,
-                                    ),
-                                ],
-                                spacing=5,
-                            ),
-                            bgcolor="#FFF0F0", border_radius=6,
-                            padding=ft.padding.only(left=10, top=5, right=10, bottom=5),
-                        ),
+                        ghost_btn("Go to Posture",
+                                on_click=lambda _: self.navigate("posture"),
+                                icon=ft.Icons.ARROW_FORWARD),
                     ],
                     spacing=0,
                 ),
                 padding=14,
                 expand=True,
             ),
-            on_click=lambda _: self.navigate("posture"),
             height=ROW1_H, expand=1,
         )
 
