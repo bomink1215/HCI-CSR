@@ -1,9 +1,27 @@
 import requests
 import threading
 import concurrent.futures
+import os
 from requests.adapters import HTTPAdapter
 
-API_KEY    = "AIzaSyBa2WuKDqJbVdlmbOqrKkQJ7t4kSrr9wqg"
+def _load_api_key() -> str:
+    # 1) 환경변수 우선
+    key = os.environ.get("FIREBASE_API_KEY", "")
+    if key:
+        return key
+    # 2) 프로젝트 루트의 .env 파일
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+    try:
+        with open(env_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("FIREBASE_API_KEY="):
+                    return line.split("=", 1)[1].strip()
+    except Exception:
+        pass
+    return ""
+
+API_KEY    = _load_api_key()
 PROJECT_ID = "zzook-52423"
 
 _AUTH      = "https://identitytoolkit.googleapis.com/v1/accounts"
