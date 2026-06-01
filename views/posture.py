@@ -386,22 +386,6 @@ class PostureView:
                              (14, 56), _cv2.FONT_HERSHEY_SIMPLEX, 0.55,
                              (90,99,117), 1, _cv2.LINE_AA)
 
-                dbg_lines = [
-                    f"[rounded] zoom     : {dbg.get('zoom',0):+.3f}  (margin +0.10)",
-                    f"[slouch]  ear_drop : {dbg.get('ear_drop',0):+.3f}  (margin +0.04)",
-                    f"[tilt]    base_tilt: {(_calib.get('tilt_raw') or 0):.3f}",
-                    f"face_w now:{dbg.get('face_w',0):.3f}  base:{dbg.get('base_fw',0):.3f}",
-                    f"ded  rounded:{ded.get(POSTURE_ROUNDED,0)}  slouch:{ded.get(POSTURE_SLOUCH,0)}  tilt:{ded.get(POSTURE_TILT,0)}",
-                ]
-                panel_h = len(dbg_lines) * 18 + 10
-                panel_y = h - panel_h - 4
-                _cv2.rectangle(frame, (0, panel_y), (w, h), (230,234,240), -1)
-                for li, line in enumerate(dbg_lines):
-                    _cv2.putText(frame, line,
-                                 (8, panel_y + 14 + li * 18),
-                                 _cv2.FONT_HERSHEY_SIMPLEX, 0.40,
-                                 (60,70,90), 1, _cv2.LINE_AA)
-
                 fps_count += 1
                 elapsed = time.time() - fps_timer
                 if elapsed >= 1.0:

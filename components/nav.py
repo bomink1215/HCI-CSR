@@ -114,9 +114,20 @@ class NavBar:
             expand=True,
         )
 
+        mascot = ft.Container(
+            content=ft.Image(
+                src="assets/mascot.png",
+                width=104,
+                height=104,
+                fit="contain",
+            ),
+            padding=ft.padding.only(bottom=24),
+            alignment=ft.Alignment(0, 0),
+        )
+
         return ft.Container(
             content=ft.Column(
-                controls=[logo, nav_buttons],
+                controls=[logo, nav_buttons, mascot],
                 spacing=0,
             ),
             width=76,
