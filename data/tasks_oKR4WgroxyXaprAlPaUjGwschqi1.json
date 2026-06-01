@@ -1,13 +1,5 @@
 [
   {
-    "title": "러닝 1시간",
-    "done": false,
-    "priority": "Low",
-    "cat": "Health",
-    "note": "",
-    "due": ""
-  },
-  {
     "title": "웹한미 영상 보기",
     "done": false,
     "priority": "Medium",

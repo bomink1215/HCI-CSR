@@ -268,37 +268,88 @@ def _show_popup_simple(score: int, posture_type: str):
 
 def _show_popup_subprocess(score: int, posture_type: str):
     import sys, subprocess
-    meta   = POSTURE_META.get(posture_type, POSTURE_META[POSTURE_ROUNDED])
-    accent = meta["accent"]
+    meta     = POSTURE_META.get(posture_type, POSTURE_META[POSTURE_ROUNDED])
+    accent   = meta["accent"]
     headline = meta["headline"]
     emoji    = meta["emoji"]
+    img_path = POSTURE_IMAGES.get(posture_type, "").replace("\\", "/")
+
     script = f"""
 import tkinter as tk
-accent = "{accent}"
+from PIL import Image, ImageTk
+import os
+
+accent   = "{accent}"
 headline = "{headline}"
-emoji = "{emoji}"
-score = {score}
-W, H = 340, 190
+emoji    = "{emoji}"
+score    = {score}
+img_path = "{img_path}"
+
+IMG_W, IMG_H = 320, 160
+W = 340
+pil_img = None
+if img_path and os.path.exists(img_path):
+    try:
+        pil_img = Image.open(img_path)
+    except Exception:
+        pil_img = None
+
+H = (IMG_H + 130) if pil_img else 190
+
 root = tk.Tk()
 root.overrideredirect(True)
 root.attributes("-topmost", True)
+root.attributes("-alpha", 0.0)
 root.configure(bg="#FFFFFF")
 sw = root.winfo_screenwidth()
 sh = root.winfo_screenheight()
-x = sw - W - 20
-y = sh - H - 68
-root.geometry(f"{{W}}x{{H}}+{{x}}+{{y}}")
-import tkinter as tk
-frame = tk.Frame(root, bg="#FFFFFF", padx=14, pady=12)
-frame.pack(fill="both", expand=True)
-tk.Label(frame, text="ZZOOK", bg="#FFFFFF", fg="#9DA8B7", font=("Segoe UI", 8)).pack(anchor="w")
-row = tk.Frame(frame, bg="#FFFFFF")
-row.pack(anchor="w")
-tk.Label(row, text=emoji, bg="#FFFFFF", font=("Segoe UI Emoji", 16)).pack(side="left", padx=(0,8))
-tk.Label(row, text=headline, bg="#FFFFFF", fg="#1A1D23", font=("Segoe UI", 13, "bold")).pack(side="left")
-tk.Label(frame, text=f"  Posture Score: {{score}}  ", bg=accent, fg="#FFFFFF", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(6,0))
-tk.Button(frame, text="✓  Fix Now", bg=accent, fg="#FFFFFF", font=("Segoe UI", 9, "bold"), relief="flat", bd=0, padx=12, pady=5, command=root.destroy).pack(anchor="w", pady=(8,0))
-root.after(8000, root.destroy)
+x       = sw - W - 20
+y_final = sh - H - 20 - 48
+y_start = sh + H
+root.geometry(f"{{W}}x{{H}}+{{x}}+{{y_start}}")
+
+outer   = tk.Frame(root, bg="#FFFFFF"); outer.pack(fill="both", expand=True)
+inner   = tk.Frame(outer, bg="#FFFFFF"); inner.pack(fill="both", expand=True)
+content = tk.Frame(inner, bg="#FFFFFF", padx=12, pady=6)
+content.pack(side="left", fill="both", expand=True)
+
+if pil_img:
+    pil_img = pil_img.resize((IMG_W, IMG_H))
+    tk_img  = ImageTk.PhotoImage(pil_img)
+    img_lbl = tk.Label(content, image=tk_img, bg="#FFFFFF", bd=0)
+    img_lbl.image = tk_img
+    img_lbl.pack(anchor="w", pady=(0, 4))
+
+tk.Label(content, text="ZZOOK", bg="#FFFFFF", fg="#9DA8B7", font=("Segoe UI", 8)).pack(anchor="w")
+top_row = tk.Frame(content, bg="#FFFFFF"); top_row.pack(anchor="w", pady=(1,0))
+tk.Label(top_row, text=emoji, bg="#FFFFFF", font=("Segoe UI Emoji", 15)).pack(side="left", padx=(0,6))
+tk.Label(top_row, text=headline, bg="#FFFFFF", fg="#1A1D23", font=("Segoe UI", 12, "bold")).pack(side="left")
+tk.Label(content, text=f"  Posture Score: {{score}}  ", bg=accent, fg="#FFFFFF", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(3,10))
+
+def slide_out(step=0):
+    if step > 15:
+        root.destroy(); return
+    t = step / 15
+    try:
+        root.geometry(f"{{W}}x{{H}}+{{x}}+{{int(y_final + (sh - y_final) * t**2)}}")
+        root.attributes("-alpha", max(0.0, 1.0 - t))
+        root.after(12, lambda: slide_out(step + 1))
+    except Exception:
+        pass
+
+btn_row = tk.Frame(content, bg="#FFFFFF"); btn_row.pack(anchor="w", pady=(0,6))
+tk.Button(btn_row, text="Fix Now", bg=accent, fg="#FFFFFF", font=("Segoe UI", 9, "bold"), relief="flat", bd=0, padx=12, pady=5, command=slide_out).pack(side="left", padx=(0,8))
+
+def slide_in(step=0):
+    if step > 20:
+        root.after(8000, slide_out); return
+    t    = step / 20
+    ease = 1 - (1 - t) ** 3
+    root.geometry(f"{{W}}x{{H}}+{{x}}+{{int(y_start + (y_final - y_start) * ease)}}")
+    root.attributes("-alpha", min(1.0, ease * 1.5))
+    root.after(15, lambda: slide_in(step + 1))
+
+slide_in()
 root.mainloop()
 """
     try:
