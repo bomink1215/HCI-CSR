@@ -1,0 +1,34 @@
+[
+  {
+    "title": "러닝 1시간",
+    "done": false,
+    "priority": "Low",
+    "cat": "Health",
+    "note": "",
+    "due": ""
+  },
+  {
+    "title": "웹한미 영상 보기",
+    "done": false,
+    "priority": "Medium",
+    "cat": "Study",
+    "note": "",
+    "due": ""
+  },
+  {
+    "title": "자연어처리 assignment1",
+    "done": true,
+    "priority": "High",
+    "cat": "Study",
+    "note": "",
+    "due": "2026-06-02"
+  },
+  {
+    "title": "회로이론 hw06",
+    "done": true,
+    "priority": "High",
+    "cat": "Study",
+    "note": "",
+    "due": "2026-06-01"
+  }
+]

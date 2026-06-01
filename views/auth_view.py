@@ -3,10 +3,10 @@ import asyncio
 from components.ui import mascot_widget
 from utils import firebase
 
-BG_BASE   = "#FFFFFF"
+BG_BASE   = "#F0F9F8"
 BG_CARD   = "#F4F6F8"
 BG_CARD2  = "#EAECEF"
-ACCENT    = "#00C9A7"
+ACCENT    = "#7AC3B8"
 ACCENT_LT = "#D6F5EF"
 DANGER    = "#FF5C5C"
 TEXT_PRI  = "#1A1D23"
@@ -86,7 +86,7 @@ class AuthView:
     def _set_nick_msg(self, msg: str, ok: bool):
         if self.nick_check_msg_ref.current:
             self.nick_check_msg_ref.current.value   = msg
-            self.nick_check_msg_ref.current.color   = "#00C9A7" if ok else DANGER
+            self.nick_check_msg_ref.current.color   = "#B9E6E0" if ok else DANGER
             self.nick_check_msg_ref.current.visible = bool(msg)
             self.nick_check_msg_ref.current.update()
 
@@ -242,11 +242,15 @@ class AuthView:
                     ft.Column(
                         controls=[
                             mascot_widget(80),
-                            ft.Container(height=16),
-                            ft.Text("ZZOOK", size=28, color=TEXT_PRI,
-                                    font_family=FONT,
-                                    text_align=ft.TextAlign.CENTER),
-                            ft.Text("Build your rhythm\nof focus and rest",
+                            ft.Container(height=12),
+                            ft.Image(
+                                src="assets/logo_zzook.png",
+                                width=240,
+                                height=75,
+                                fit="contain",
+                            ),
+                            ft.Container(height=4),
+                            ft.Text("Build your rhythm of focus and rest",
                                     size=13, color=TEXT_MUT, font_family=FONT,
                                     text_align=ft.TextAlign.CENTER),
                         ],
@@ -350,7 +354,7 @@ class AuthView:
                                             ft.Container(
                                                 ref=self.nick_check_btn_ref,
                                                 content=ft.Text("Check", size=12,
-                                                                color="#FFFFFF", font_family=FONT,
+                                                                color="#F0F9F8", font_family=FONT,
                                                                 text_align=ft.TextAlign.CENTER),
                                                 bgcolor=ACCENT,
                                                 border_radius=10,
@@ -393,7 +397,7 @@ class AuthView:
                                             ft.Text(
                                                 ref=self.submit_text_ref,
                                                 value="Log In", size=14,
-                                                color="#FFFFFF", font_family=FONT,
+                                                color="#F0F9F8", font_family=FONT,
                                             ),
                                         ],
                                         alignment=ft.MainAxisAlignment.CENTER,
@@ -403,7 +407,7 @@ class AuthView:
                                         controls=[
                                             ft.ProgressRing(
                                                 width=18, height=18,
-                                                stroke_width=2, color="#FFFFFF",
+                                                stroke_width=2, color="#F0F9F8",
                                             ),
                                         ],
                                         alignment=ft.MainAxisAlignment.CENTER,

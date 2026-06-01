@@ -6,13 +6,5 @@
     "cat": "Study",
     "note": "",
     "due": "2026-06-02"
-  },
-  {
-    "title": "haircut",
-    "done": false,
-    "priority": "Low",
-    "cat": "Personal",
-    "note": "",
-    "due": "2026-05-30"
   }
 ]

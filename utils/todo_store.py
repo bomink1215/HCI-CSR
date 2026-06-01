@@ -66,17 +66,16 @@ def init_for_user(uid: str):
 
 
 def archive_completed_and_expired() -> int:
-    """완료되거나 기한이 지난 투두를 아카이브로 이동. 이동된 개수 반환."""
     global _tasks
     today = _date.today().isoformat()
     to_archive, to_keep = [], []
     for task in _tasks:
         due     = task.get("due", "")
         expired = bool(due) and due < today
-        if task["done"] or expired:
+        if expired and not task["done"]:  # 기한 지난 것만 아카이브
             entry = dict(task)
             entry["archived_at"] = today
-            entry["reason"] = "done" if task["done"] else "expired"
+            entry["reason"] = "expired"
             to_archive.append(entry)
         else:
             to_keep.append(task)
@@ -85,7 +84,6 @@ def archive_completed_and_expired() -> int:
     _save()
     _save_archive()
     return len(to_archive)
-
 
 def get_archives() -> list[dict]:
     """아카이브된 투두 반환 (최신순)."""

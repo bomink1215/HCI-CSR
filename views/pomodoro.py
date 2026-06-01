@@ -35,14 +35,14 @@ import tkinter as tk
 title   = sys.argv[1]
 message = sys.argv[2]
 
-ACCENT = "#00C9A7"
+ACCENT    = "#7AC3B8"
 W, H   = 300, 90
 
 root = tk.Tk()
 root.overrideredirect(True)
 root.attributes("-topmost", True)
 root.attributes("-alpha", 0.0)
-root.configure(bg="#FFFFFF")
+root.configure(bg="#F0F9F8")
 
 sw = root.winfo_screenwidth()
 sh = root.winfo_screenheight()
@@ -59,7 +59,7 @@ inner.pack(fill="both", expand=True)
 
 tk.Label(inner, text=title, bg="#1A1D23", fg=ACCENT,
          font=("Segoe UI", 10, "bold")).pack(anchor="w")
-tk.Label(inner, text=message, bg="#1A1D23", fg="#FFFFFF",
+tk.Label(inner, text=message, bg="#1A1D23", fg="#F0F9F8",
          font=("Segoe UI", 9), wraplength=260,
          justify="left").pack(anchor="w", pady=(4, 0))
 
@@ -101,14 +101,14 @@ def _notify_tkinter(title: str, message: str):
     try:
         import tkinter as tk
 
-        ACCENT = "#00C9A7"
+        ACCENT    = "#7AC3B8"
         W, H   = 300, 90
 
         root = tk.Tk()
         root.overrideredirect(True)
         root.attributes("-topmost", True)
         root.attributes("-alpha", 0.0)
-        root.configure(bg="#FFFFFF")
+        root.configure(bg="#F0F9F8")
 
         sw = root.winfo_screenwidth()
         sh = root.winfo_screenheight()
@@ -125,7 +125,7 @@ def _notify_tkinter(title: str, message: str):
 
         tk.Label(inner, text=title, bg="#1A1D23", fg=ACCENT,
                  font=("Helvetica", 10, "bold")).pack(anchor="w")
-        tk.Label(inner, text=message, bg="#1A1D23", fg="#FFFFFF",
+        tk.Label(inner, text=message, bg="#1A1D23", fg="#F0F9F8",
                  font=("Helvetica", 9), wraplength=260,
                  justify="left").pack(anchor="w", pady=(4, 0))
 
@@ -156,21 +156,21 @@ def _notify_tkinter(title: str, message: str):
     except Exception:
         pass
 
-BG_BASE   = "#FFFFFF"
+BG_BASE   = "#F0F9F8"
 BG_CARD   = "#F4F6F8"
 BG_CARD2  = "#EAECEF"
-ACCENT    = "#00C9A7"
+ACCENT    = "#7AC3B8"
 ACCENT_LT = "#D6F5EF"
 ACCENT_DK = "#009E83"
 DANGER    = "#FF5C5C"
 WARNING   = "#FFB347"
-PURPLE    = "#9B8FFF"
+PINK    = "#F3A2BE"
 TEXT_PRI  = "#1A1D23"
 TEXT_SEC  = "#5A6375"
 TEXT_MUT  = "#9DA8B7"
 BORDER    = "#E2E6EC"
 
-MODE_COLORS  = {"focus": ACCENT,   "rest": PURPLE}
+MODE_COLORS  = {"focus": ACCENT,   "rest": PINK}
 MODE_LABELS  = {"focus": "Focus",  "rest": "Break"}
 
 
@@ -586,7 +586,7 @@ class PomodoroView:
     def _history_rows(self) -> list:
         rows = []
         for mode_l, start, end, _ in self.history[-5:]:
-            color = ACCENT if mode_l == "Focus" else PURPLE
+            color = ACCENT if mode_l == "Focus" else PINK
             rows.append(ft.Container(
                 content=ft.Row(
                     controls=[
@@ -715,7 +715,7 @@ class PomodoroView:
                                 content=ft.Icon(
                                     ref=self.play_icon_ref,
                                     icon=ft.Icons.PLAY_ARROW,
-                                    size=26, color="#FFFFFF",
+                                    size=26, color="#F0F9F8",
                                 ),
                                 width=68, height=68, border_radius=34,
                                 bgcolor=ACCENT,
@@ -800,7 +800,7 @@ class PomodoroView:
                 self.test_btn_ref.current.border  = ft.border.all(1.5, DANGER if self.test_mode else BORDER)
                 lbl: ft.Text = self.test_btn_ref.current.content
                 lbl.value = "🧪 Test Mode ON  (10s × 2)" if self.test_mode else "🧪 Test Mode"
-                lbl.color = "#FFFFFF" if self.test_mode else TEXT_MUT
+                lbl.color = "#F0F9F8" if self.test_mode else TEXT_MUT
                 self.test_btn_ref.current.update()
 
             secs = 10 if self.test_mode else (
@@ -842,7 +842,7 @@ class PomodoroView:
                         ft.Slider(
                             min=5, max=30, value=self.rest_minutes,
                             divisions=5,
-                            active_color=PURPLE, inactive_color=BORDER, thumb_color=PURPLE,
+                            active_color=PINK, inactive_color=BORDER, thumb_color=PINK,
                             on_change=on_rest_change,
                         ),
                     ], spacing=2),

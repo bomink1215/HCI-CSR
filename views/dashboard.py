@@ -5,13 +5,13 @@ from datetime import datetime
 from utils import firebase, session, todo_store, score_store
 from utils.alert_manager import is_monitoring
 
-BG_BASE   = "#FFFFFF"
+BG_BASE   = "#F0F9F8"
 BG_CARD   = "#F4F6F8"
-ACCENT    = "#00C9A7"
+ACCENT    = "#7AC3B8"
 ACCENT_LT = "#D6F5EF"
 DANGER    = "#FF5C5C"
 WARNING   = "#FFB347"
-PURPLE    = "#9B8FFF"
+PINK = "#F3A2BE"
 TEXT_PRI  = "#1A1D23"
 TEXT_SEC  = "#5A6375"
 TEXT_MUT  = "#9DA8B7"
@@ -22,7 +22,7 @@ ROW1_H = 240
 ROW2_H = 260
 
 POMO_LABELS = {"focus": "Focus Session", "rest": "Break Session"}
-POMO_COLORS = {"focus": ACCENT,          "rest": PURPLE}
+POMO_COLORS = {"focus": ACCENT,          "rest": PINK}
 
 
 def _fmt_min(minutes: int) -> str:
@@ -30,7 +30,7 @@ def _fmt_min(minutes: int) -> str:
     return f"{h}h {m:02d}m" if h else f"{m}m"
 
 _AVATAR_COLORS = [
-    "#00C9A7", "#9B8FFF", "#FF5C5C", "#FFB347",
+    "#B9E6E0", "#9B8FFF", "#FF5C5C", "#FFB347",
     "#34D399", "#60A5FA", "#F472B6", "#A78BFA",
 ]
 
@@ -128,7 +128,7 @@ class DashboardView:
                 controls=[
                     ft.Container(
                         content=ft.Icon(ft.Icons.DONE, size=11,
-                                        color="#FFFFFF" if done else "transparent"),
+                                        color="#F0F9F8" if done else "transparent"),
                         width=18, height=18, border_radius=5,
                         border=ft.border.all(1.5, ACCENT if done else BORDER),
                         bgcolor=ACCENT if done else "transparent",
@@ -373,7 +373,7 @@ class DashboardView:
                 medal, u["nickname"],
                 f"{u['_posture_val']}pts",
                 _avatar_color(u["nickname"]), is_me,
-                accent_color=PURPLE,
+                accent_color=PINK,
             ))
         if not posture_rows:
             posture_rows = [ft.Text("No posture data yet",
@@ -392,7 +392,7 @@ class DashboardView:
                 ft.Container(
                     content=ft.Text(
                         name[:1].upper(), size=10,
-                        color="#FFFFFF", font_family=FONT,
+                        color="#F0F9F8", font_family=FONT,
                     ),
                     width=22, height=22, border_radius=11,
                     bgcolor=color, alignment=ft.Alignment(0, 0),
@@ -449,7 +449,7 @@ class DashboardView:
                 controls=[
                     ft.Container(
                         content=ft.Icon(ft.Icons.DONE, size=11,
-                                        color="#FFFFFF" if done else "transparent"),
+                                        color="#F0F9F8" if done else "transparent"),
                         width=18, height=18, border_radius=5,
                         border=ft.border.all(1.5, ACCENT if done else BORDER),
                         bgcolor=ACCENT if done else "transparent",
@@ -618,7 +618,7 @@ class DashboardView:
             content=ft.Icon(
                 ref=self.pomo_play_icon_ref,
                 icon=ft.Icons.PLAY_ARROW,
-                size=20, color="#FFFFFF",
+                size=20, color="#F0F9F8",
             ),
             width=BTN_SZ + 10, height=BTN_SZ + 10,
             border_radius=(BTN_SZ + 10) // 2,

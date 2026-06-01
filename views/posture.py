@@ -7,10 +7,10 @@ import tempfile
 import statistics
 from utils import alert_manager, score_store
 
-BG_BASE   = "#FFFFFF"
+BG_BASE   = "#F0F9F8"
 BG_CARD   = "#F4F6F8"
 BG_CARD2  = "#EAECEF"
-ACCENT    = "#00C9A7"
+ACCENT    = "#7AC3B8"
 ACCENT_LT = "#D6F5EF"
 DANGER    = "#FF5C5C"
 WARNING   = "#FFB347"
@@ -640,10 +640,10 @@ class PostureView:
                     ft.Container(
                         content=ft.Row(
                             controls=[
-                                ft.Icon(ft.Icons.PLAY_ARROW, size=18, color="#FFFFFF"),
+                                ft.Icon(ft.Icons.PLAY_ARROW, size=18, color="#F0F9F8"),
                                 ft.Text("Start Monitoring", size=14,
                                         weight=ft.FontWeight.W_400,
-                                        color="#FFFFFF", font_family="DOSSaemmul"),
+                                        color="#F0F9F8", font_family="DOSSaemmul"),
                             ],
                             alignment=ft.MainAxisAlignment.CENTER,
                             spacing=8,

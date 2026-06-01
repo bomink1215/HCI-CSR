@@ -11,10 +11,14 @@ from utils.alert_manager import start_alert_daemon
 from utils import session, firebase, score_store, todo_store
 
 APP_THEME = ft.Theme(
-    color_scheme_seed="#00C9A7",
+    color_scheme=ft.ColorScheme(
+        primary="#7AC3B8",
+        secondary="#B9E6E0",
+        surface="#FFFFFF",
+    ),
     font_family="DOSSaemmul",
 )
-BG_BASE = "#FFFFFF"
+BG_BASE   = "#F0F9F8"
 
 
 def main(page: ft.Page):

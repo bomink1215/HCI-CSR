@@ -1,14 +1,14 @@
 import flet as ft
 
 # ── Design Tokens ─────────────────────────────────────────────────
-BG_BASE   = "#FFFFFF"
-BG_CARD   = "#F4F6F8"
-BG_CARD2  = "#EAECEF"
-BG_HOVER  = "#EDF9F6"
+BG_BASE   = "#F0F9F8"
+BG_CARD   = "#FFFFFF"
+BG_CARD2  = "#E8F5F3"
+BG_HOVER  = "#D6EFEC"
 
-ACCENT    = "#00C9A7"
-ACCENT_DK = "#009E83"
-ACCENT_LT = "#D6F5EF"
+ACCENT    = "#7AC3B8"
+ACCENT_DK = "#7AC3B8"
+ACCENT_LT = "#EAF6F4"
 DANGER    = "#FF5C5C"
 WARNING   = "#FFB347"
 

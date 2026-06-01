@@ -1,0 +1,22 @@
+[
+  {
+    "title": "회로이론 과제",
+    "done": true,
+    "priority": "High",
+    "cat": "Study",
+    "note": "",
+    "due": "2026-06-01",
+    "archived_at": "2026-06-01",
+    "reason": "done"
+  },
+  {
+    "title": "자연어처리 assignment1",
+    "done": true,
+    "priority": "High",
+    "cat": "Study",
+    "note": "",
+    "due": "2026-06-02",
+    "archived_at": "2026-06-01",
+    "reason": "done"
+  }
+]

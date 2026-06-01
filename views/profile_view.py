@@ -3,10 +3,10 @@ import asyncio
 from components.ui import card, accent_btn, ghost_btn, mascot_widget
 from utils import firebase, session
 
-BG_BASE   = "#FFFFFF"
+BG_BASE   = "#F0F9F8"
 BG_CARD   = "#F4F6F8"
 BG_CARD2  = "#EAECEF"
-ACCENT    = "#00C9A7"
+ACCENT    = "#7AC3B8"
 ACCENT_LT = "#D6F5EF"
 DANGER    = "#FF5C5C"
 WARNING   = "#FFB347"
@@ -205,7 +205,7 @@ class ProfileView:
                                 content=ft.Text(
                                     ref=self.profile_avatar_ref,
                                     value=nickname[:1].upper() if nickname else "?",
-                                    size=24, color="#FFFFFF", font_family=FONT,
+                                    size=24, color="#F0F9F8", font_family=FONT,
                                 ),
                                 width=56, height=56, border_radius=28,
                                 bgcolor=ACCENT, alignment=ft.Alignment(0, 0),
@@ -252,7 +252,7 @@ class ProfileView:
                             ),
                             ft.Container(width=8),
                             ft.Container(
-                                content=ft.Text("Check", size=12, color="#FFFFFF",
+                                content=ft.Text("Check", size=12, color="#F0F9F8",
                                                 font_family=FONT,
                                                 text_align=ft.TextAlign.CENTER),
                                 bgcolor=ACCENT, border_radius=10,
@@ -265,7 +265,7 @@ class ProfileView:
                     ft.Text(ref=self.nick_check_msg_ref, value="", size=11, font_family=FONT),
                     ft.Container(height=8),
                     ft.Container(
-                        content=ft.Text("Save Nickname", size=13, color="#FFFFFF",
+                        content=ft.Text("Save Nickname", size=13, color="#F0F9F8",
                                         font_family=FONT, text_align=ft.TextAlign.CENTER),
                         bgcolor=ACCENT, border_radius=10,
                         padding=ft.padding.symmetric(horizontal=20, vertical=12),
@@ -297,7 +297,7 @@ class ProfileView:
                     ft.Text(ref=self.pw_status_ref, value="", size=11, font_family=FONT),
                     ft.Container(height=8),
                     ft.Container(
-                        content=ft.Text("Save Password", size=13, color="#FFFFFF",
+                        content=ft.Text("Save Password", size=13, color="#F0F9F8",
                                         font_family=FONT, text_align=ft.TextAlign.CENTER),
                         bgcolor=ACCENT, border_radius=10,
                         padding=ft.padding.symmetric(horizontal=20, vertical=12),

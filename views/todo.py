@@ -4,15 +4,14 @@ from components.ui import card
 from datetime import date
 from utils import todo_store
 
-BG_BASE   = "#FFFFFF"
+BG_BASE   = "#F0F9F8"
 BG_CARD   = "#F4F6F8"
 BG_CARD2  = "#EAECEF"
-ACCENT    = "#00C9A7"
+ACCENT    = "#7AC3B8"
 ACCENT_LT = "#D6F5EF"
 DANGER    = "#FF5C5C"
 WARNING   = "#FFB347"
-PURPLE    = "#9B8FFF"
-PINK      = "#F472B6"
+PINK      = "#F3A2BE"
 TEXT_PRI  = "#1A1D23"
 TEXT_SEC  = "#5A6375"
 TEXT_MUT  = "#9DA8B7"
@@ -27,9 +26,9 @@ PRIORITY_COLORS = {
 }
 CATEGORY_COLORS = {
     "Work":     BLUE,     # 파랑
-    "Personal": PURPLE,   # 보라
-    "Health":   PINK,     # 핑크
-    "Study":    WARNING,  # 노랑
+    "Personal": ACCENT,   # 민트
+    "Health":   WARNING,     # 노랑
+    "Study":    PINK,  # 핑크
 }
 CATS       = ["Work", "Personal", "Health", "Study"]
 PRIORITIES = ["High", "Medium", "Low"]
@@ -58,7 +57,7 @@ class TodoView:
 
         self.due_field = ft.TextField(
             hint_text="MM-DD",
-            hint_style=ft.TextStyle(color=TEXT_MUT, size=11, font_family="DOSSaemmul"),
+            hint_style=ft.TextStyle(color=TEXT_PRI, size=11, font_family="DOSSaemmul"),
             text_style=ft.TextStyle(color=TEXT_PRI, size=11, font_family="DOSSaemmul"),
             bgcolor="transparent",
             border_color="transparent",
@@ -126,7 +125,7 @@ class TodoView:
                             ft.Container(
                                 content=ft.Text(
                                     str(day), size=12,
-                                    color="#FFFFFF" if is_today else (TEXT_MUT + "55" if is_past else TEXT_PRI),
+                                    color="#F0F9F8" if is_today else (TEXT_MUT + "55" if is_past else TEXT_PRI),
                                     font_family="DOSSaemmul",
                                     text_align=ft.TextAlign.CENTER,
                                 ),
@@ -310,7 +309,7 @@ class TodoView:
                 controls=[
                     ft.Container(
                         content=ft.Icon(ft.Icons.DONE, size=12,
-                                        color="#FFFFFF" if done else "transparent"),
+                                        color="#F0F9F8" if done else "transparent"),
                         width=20, height=20,
                         border_radius=5,
                         border=ft.border.all(1.5, ACCENT if done else BORDER),
@@ -428,7 +427,7 @@ class TodoView:
 
             color = CATEGORY_COLORS.get(cat, ACCENT)
             sorted_tasks = sorted(cat_tasks,
-                                  key=lambda t: (t["done"], order.get(t["priority"], 1)))
+                                  key=lambda t: (t["done"], order.get(t["priority"], 1), t.get("due", "9999")))
             done_n = sum(1 for t in cat_tasks if t["done"])
 
             sections.append(
@@ -523,7 +522,7 @@ class TodoView:
             shape=ft.RoundedRectangleBorder(radius=16),
             title=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.ARCHIVE_OUTLINED, size=18, color=PURPLE),
+                    ft.Icon(ft.Icons.ARCHIVE_OUTLINED, size=18, color=PINK),
                     ft.Text("Archive", size=15, color=TEXT_PRI, font_family="DOSSaemmul"),
                     ft.Container(expand=True),
                     ft.IconButton(
@@ -626,7 +625,7 @@ class TodoView:
                 ft.Column(controls=[
                     ft.Text(ref=self.stat_pct_ref, value=f"{pct}%",
                             size=26, weight=ft.FontWeight.W_400,
-                            color=PURPLE, font_family="DOSSaemmul"),
+                            color=PINK, font_family="DOSSaemmul"),
                     ft.Text("Completion", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             ],
@@ -654,7 +653,7 @@ class TodoView:
                                 self.new_text,
                                 ft.Container(
                                     content=ft.Icon(ft.Icons.ARROW_UPWARD,
-                                                    size=14, color="#FFFFFF"),
+                                                    size=14, color="#F0F9F8"),
                                     bgcolor=ACCENT,
                                     border_radius=8,
                                     width=32, height=32,
@@ -717,7 +716,7 @@ class TodoView:
                                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                                         ),
                                         on_click=self._open_calendar,
-                                        bgcolor=ACCENT + "18",
+                                        bgcolor=PINK,
                                         border_radius=6,
                                         padding=ft.padding.only(left=8, top=4, right=6, bottom=4),
                                         tooltip="Click to pick a date",
@@ -732,7 +731,7 @@ class TodoView:
                 ],
                 spacing=8,
             ),
-            bgcolor=ACCENT_LT,
+            bgcolor="#FFFFFF",
             border_radius=14,
             border=ft.border.all(1.5, ACCENT + "55"),
             padding=ft.padding.only(left=14, top=12, right=14, bottom=12),

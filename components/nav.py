@@ -98,24 +98,11 @@ class NavBar:
 
     def build(self) -> ft.Container:
         logo = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Container(
-                        content=ft.Text("Z", size=20, weight=ft.FontWeight.W_400,
-                                        color="#FFFFFF", font_family="DOSSaemmul"),
-                        width=38, height=38,
-                        bgcolor=ACCENT,
-                        border_radius=12,
-                        alignment=ft.Alignment(0, 0),
-                        shadow=ft.BoxShadow(blur_radius=12, color=ACCENT + "55",
-                                            offset=ft.Offset(0, 3)),
-                    ),
-                    ft.Text("ZZOOK", size=11, color=ACCENT,
-                            weight=ft.FontWeight.W_400, text_align=ft.TextAlign.CENTER,
-                            font_family="DOSSaemmul"),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=6,
+            content=ft.Image(
+                src="assets/logo_zzook.png",
+                width=56,
+                height=28,
+                fit="contain",
             ),
             padding=ft.padding.only(top=24, bottom=28),
             alignment=ft.Alignment(0, 0),
@@ -127,22 +114,9 @@ class NavBar:
             expand=True,
         )
 
-        settings_btn = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Icon(ft.Icons.SETTINGS, size=20, color=TEXT_MUT),
-                    ft.Text("Settings", size=10, color=TEXT_MUT, font_family="DOSSaemmul"),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=2,
-            ),
-            padding=ft.padding.only(top=8, bottom=24),
-            alignment=ft.Alignment(0, 0),
-        )
-
         return ft.Container(
             content=ft.Column(
-                controls=[logo, nav_buttons, settings_btn],
+                controls=[logo, nav_buttons],
                 spacing=0,
             ),
             width=76,

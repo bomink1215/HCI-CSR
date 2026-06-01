@@ -8,5 +8,15 @@
     "due": "2026-05-31",
     "archived_at": "2026-05-29",
     "reason": "done"
+  },
+  {
+    "title": "haircut",
+    "done": false,
+    "priority": "Low",
+    "cat": "Personal",
+    "note": "",
+    "due": "2026-05-30",
+    "archived_at": "2026-05-31",
+    "reason": "expired"
   }
 ]

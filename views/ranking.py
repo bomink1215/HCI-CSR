@@ -4,15 +4,17 @@ from datetime import date as _date
 from components.ui import card
 from utils import firebase, session, score_store
 
-BG_BASE   = "#FFFFFF"
-BG_CARD   = "#F4F6F8"
-BG_CARD2  = "#EAECEF"
-ACCENT    = "#00C9A7"
-ACCENT_LT = "#D6F5EF"
+BG_BASE   = "#F0F9F8"
+BG_CARD   = "#FFFFFF"
+BG_CARD2  = "#E8F5F3"
+ACCENT    = "#7AC3B8"
+ACCENT_LT = "#EAF6F4"
 DANGER    = "#FF5C5C"
 WARNING   = "#FFB347"
-PURPLE    = "#9B8FFF"
-PURPLE_LT = "#EDE9FF"
+PINK    = "#F3A2BE"
+PINK_LT = "#FDEEF2"
+LEMON    = "#A8C048"
+LEMON_LT = "#F5FAD4"
 TEXT_PRI  = "#1A1D23"
 TEXT_SEC  = "#5A6375"
 TEXT_MUT  = "#9DA8B7"
@@ -20,8 +22,8 @@ BORDER    = "#E2E6EC"
 FONT      = "DOSSaemmul"
 
 _AVATAR_COLORS = [
-    "#00C9A7", "#9B8FFF", "#FF5C5C", "#FFB347",
-    "#34D399", "#60A5FA", "#F472B6", "#A78BFA",
+    "#7AC3B8", "#F3A2BE", "#FF5C5C", "#FFB347",
+    "#34D399", "#60A5FA", "#F3A2BE", "#7AC3B8",
 ]
 
 
@@ -105,8 +107,8 @@ class RankingView:
     def _switch_metric(self, metric: str, e=None):
         self.metric = metric
         _META = {
-            "focus":   (self.metric_focus_ref,   self.metric_focus_text_ref,   ACCENT,  ACCENT_LT),
-            "posture": (self.metric_posture_ref,  self.metric_posture_text_ref, PURPLE,  PURPLE_LT),
+            "focus":   (self.metric_focus_ref,   self.metric_focus_text_ref,   LEMON,  LEMON_LT),
+            "posture": (self.metric_posture_ref,  self.metric_posture_text_ref, PINK,  PINK_LT),
         }
         for m, (m_ref, mt_ref, color, bg) in _META.items():
             active = m == metric
@@ -397,7 +399,7 @@ class RankingView:
         sessions = user_data.get("sessions", 0)
         color    = _avatar_color(nickname)
         medal    = ["🥇", "🥈", "🥉"][rank - 1] if rank <= 3 else f"#{rank}"
-        val_color = ACCENT if unit_label == "Focus" else PURPLE
+        val_color = LEMON if unit_label == "Focus" else PINK
 
         return ft.Container(
             content=ft.Row(
@@ -464,7 +466,7 @@ class RankingView:
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor=(ACCENT_LT if unit_label == "Focus" else PURPLE_LT) if is_me else BG_CARD,
+            bgcolor=(LEMON_LT if unit_label == "Focus" else PINK_LT) if is_me else BG_CARD,
             border_radius=12,
             padding=ft.padding.only(left=12, top=10, right=14, bottom=10),
             border=ft.border.all(1.5, val_color + "50" if is_me else BORDER),
@@ -587,10 +589,10 @@ class RankingView:
                 controls=[
                     _metric_btn("focus",   "Focus",
                                 self.metric_focus_ref,   self.metric_focus_text_ref,
-                                ACCENT, ACCENT_LT),
+                                LEMON, LEMON_LT),
                     _metric_btn("posture", "Posture",
                                 self.metric_posture_ref, self.metric_posture_text_ref,
-                                PURPLE, PURPLE_LT),
+                                PINK, PINK_LT),
                 ],
                 spacing=4,
             ),
