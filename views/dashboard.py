@@ -266,7 +266,7 @@ class DashboardView:
         color  = ACCENT    if on else DANGER
         bg     = ACCENT_LT if on else "#FFF0F0"
         border = None
-        label  = "Camera ON" if on else "Camera OFF"
+        label  = "Live Detection ON" if on else "Live Detection OFF"
         if self.live_dot_ref.current:
             self.live_dot_ref.current.bgcolor = color
             self.live_dot_ref.current.update()
@@ -534,7 +534,7 @@ class DashboardView:
                                     controls=[
                                         ft.Text(
                                             ref=self.dash_posture_label_ref,
-                                            value="Not measured", size=20,
+                                            value="Not measured", size=28,
                                             color=TEXT_MUT, font_family=FONT),
                                         ft.Container(height=6),
                                         ft.Container(
@@ -550,7 +550,7 @@ class DashboardView:
                                                             ),
                                                             ft.Text(
                                                                 ref=self.live_text_ref,
-                                                                value="Camera OFF",
+                                                                value="Live Detection OFF",
                                                                 size=9, color=DANGER,
                                                                 font_family=FONT,
                                                             ),
@@ -581,7 +581,7 @@ class DashboardView:
                 padding=14,
                 expand=True,
             ),
-            height=ROW1_H, expand=1,
+            height=ROW1_H, width=320,
         )
 
         todo_card = ft.Container(
@@ -615,7 +615,7 @@ class DashboardView:
                 ),
                 padding=14,
             ),
-            height=ROW1_H, expand=2,
+            height=ROW1_H, expand=True,
         )
 
         RING_SZ = 110
@@ -709,15 +709,15 @@ class DashboardView:
                 expand=True,
             ),
             on_click=lambda _: self.navigate("pomodoro"),
-            height=ROW1_H, expand=1,
+            height=ROW1_H, width = 240,
         )
 
         row1 = ft.Row(
             controls=[
                 posture_card,
-                ft.Container(width=10),
+                ft.Container(width=3),
                 todo_card,
-                ft.Container(width=10),
+                ft.Container(width=3),
                 pomodoro_card,
             ],
             vertical_alignment=ft.CrossAxisAlignment.START,
@@ -909,7 +909,7 @@ class DashboardView:
         row2 = ft.Row(
             controls=[
                 charts_col,
-                ft.Container(width=10),
+                ft.Container(width=3),
                 rank_card,
             ],
             vertical_alignment=ft.CrossAxisAlignment.START,

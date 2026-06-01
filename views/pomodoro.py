@@ -235,7 +235,7 @@ class PomodoroView:
         self._thread   = None
         self.sessions_done = 0
         self.cycle_count   = 4
-        self.auto_start = False
+        self.auto_start = True
         self.sound_on   = True
         self.history = list(score_store.get_today_history())  # 저장된 오늘 로그 복원
         self.session_start_str = ""
@@ -885,7 +885,7 @@ class PomodoroView:
                     ft.Row(controls=[
                         ft.Text("Auto Start", size=12, color=TEXT_SEC,
                                 font_family="DOSSaemmul", expand=True),
-                        ft.Switch(value=False, active_color=ACCENT, scale=0.8,
+                        ft.Switch(value=True, active_color=ACCENT, scale=0.8,
                                   on_change=toggle_auto),
                     ]),
                     ft.Container(expand=True),
