@@ -115,9 +115,15 @@ def add_focus_minutes(minutes: int):
         return
     day = _day()
     _ensure(day)
-    _data[day]["focus_minutes"] = _data[day].get("focus_minutes", 0) + minutes
+    _data[day]["focus_minutes"]  = _data[day].get("focus_minutes", 0) + minutes
+    _data[day]["focus_sessions"] = _data[day].get("focus_sessions", 0) + 1
     _save()
     _notify()
+
+
+def get_today_focus_sessions() -> int:
+    """오늘 완료된 포커스 세션 수."""
+    return _data.get(_day(), {}).get("focus_sessions", 0)
 
 
 def add_history_entry(mode_label: str, start: str, end: str, status: str):

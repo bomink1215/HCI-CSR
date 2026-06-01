@@ -322,18 +322,23 @@ def update_today_posture(uid: str, id_token: str,
 
 
 def update_today_focus(uid: str, id_token: str,
-                       focus_min: int, date_str: str) -> dict:
-    """오늘 집중 시간(분)을 Firebase에 덮어씀 — 날짜가 바뀌면 자동 리셋."""
+                       focus_min: int, date_str: str,
+                       today_sessions: int = 0) -> dict:
+    """오늘 집중 시간(분)과 오늘 세션 수를 Firebase에 덮어씀 — 날짜가 바뀌면 자동 리셋."""
     try:
         r = _http.patch(
             f"{_FS}/users/{uid}",
             params=[("updateMask.fieldPaths", "today_focus_min"),
-                    ("updateMask.fieldPaths", "today_date")],
+                    ("updateMask.fieldPaths", "today_date"),
+                    ("updateMask.fieldPaths", "today_sessions"),
+                    ("updateMask.fieldPaths", "today_sessions_date")],
             headers={"Authorization": f"Bearer {id_token}"},
             json={
                 "fields": {
-                    "today_focus_min": {"integerValue": str(focus_min)},
-                    "today_date":      {"stringValue": date_str},
+                    "today_focus_min":    {"integerValue": str(focus_min)},
+                    "today_date":         {"stringValue": date_str},
+                    "today_sessions":     {"integerValue": str(today_sessions)},
+                    "today_sessions_date":{"stringValue": date_str},
                 }
             },
             timeout=TIMEOUT,
@@ -348,15 +353,17 @@ def _parse_user_fields(fields: dict, fallback_uid: str = "") -> dict:
     def _i(k): return int(fields.get(k, {}).get("integerValue", 0) or 0)
     def _s(k): return fields.get(k, {}).get("stringValue", "")
     return {
-        "uid":                _s("uid") or fallback_uid,
-        "username":           _s("username"),
-        "nickname":           _s("nickname"),
-        "focus_min":          _i("focus_min"),
-        "sessions":           _i("sessions"),
-        "today_focus_min":    _i("today_focus_min"),
-        "today_date":         _s("today_date"),
-        "today_posture_score":_i("today_posture_score"),
-        "today_posture_date": _s("today_posture_date"),
+        "uid":                 _s("uid") or fallback_uid,
+        "username":            _s("username"),
+        "nickname":            _s("nickname"),
+        "focus_min":           _i("focus_min"),
+        "sessions":            _i("sessions"),
+        "today_focus_min":     _i("today_focus_min"),
+        "today_date":          _s("today_date"),
+        "today_sessions":      _i("today_sessions"),
+        "today_sessions_date": _s("today_sessions_date"),
+        "today_posture_score": _i("today_posture_score"),
+        "today_posture_date":  _s("today_posture_date"),
     }
 
 

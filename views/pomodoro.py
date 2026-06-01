@@ -398,10 +398,12 @@ class PomodoroView:
                     result = firebase.update_stats(uid, token, focus_mins, 1)
                     if "error" not in (result or {}):
                         score_store.mark_synced(focus_mins)
-                    # 오늘 집중 시간 즉시 동기화 (랭킹 실시간 반영)
+                    # 오늘 집중 시간 + 세션 수 즉시 동기화 (랭킹 실시간 반영)
                     today_min = score_store.get_today_focus_minutes()
+                    today_sess = score_store.get_today_focus_sessions()
                     firebase.update_today_focus(uid, token, today_min,
-                                                _date.today().isoformat())
+                                                _date.today().isoformat(),
+                                                today_sessions=today_sess)
             threading.Thread(target=_update_stats, daemon=True).start()
 
         if self.mode == "focus" and self.sessions_done >= self.cycle_count:
@@ -585,7 +587,7 @@ class PomodoroView:
 
     def _history_rows(self) -> list:
         rows = []
-        for mode_l, start, end, _ in self.history[-5:]:
+        for mode_l, start, end, _ in self.history:
             color = ACCENT if mode_l == "Focus" else PINK
             rows.append(ft.Container(
                 content=ft.Row(

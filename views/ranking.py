@@ -154,9 +154,10 @@ class RankingView:
             return
         today_str = _date.today().isoformat()
 
-        today_min = score_store.get_today_focus_minutes()
+        today_min  = score_store.get_today_focus_minutes()
+        today_sess = score_store.get_today_focus_sessions()
         await asyncio.to_thread(
-            firebase.update_today_focus, uid, id_token, today_min, today_str
+            firebase.update_today_focus, uid, id_token, today_min, today_str, today_sess
         )
 
         posture = score_store.get_today_posture()
@@ -396,7 +397,9 @@ class RankingView:
     def _rank_row(self, rank: int, user_data: dict, is_me: bool,
                   value_str: str = "—", unit_label: str = "Focus") -> ft.Container:
         nickname = user_data.get("nickname", "?")
-        sessions = user_data.get("sessions", 0)
+        today_str = __import__('datetime').date.today().isoformat()
+        sessions  = (user_data.get("today_sessions", 0)
+                     if user_data.get("today_sessions_date") == today_str else 0)
         color    = _avatar_color(nickname)
         medal    = ["🥇", "🥈", "🥉"][rank - 1] if rank <= 3 else f"#{rank}"
         val_color = LEMON if unit_label == "Focus" else PINK

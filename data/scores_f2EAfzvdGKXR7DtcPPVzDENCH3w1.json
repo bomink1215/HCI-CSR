@@ -41,5 +41,139 @@
         "status": "Done"
       }
     ]
+  },
+  "2026-06-01": {
+    "posture_scores": [],
+    "focus_minutes": 14,
+    "synced_minutes": 14,
+    "history": [
+      {
+        "mode": "Focus",
+        "start": "16:41",
+        "end": "16:42",
+        "status": "Done"
+      },
+      {
+        "mode": "Break",
+        "start": "16:42",
+        "end": "16:42",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "16:42",
+        "end": "16:42",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "17:00",
+        "end": "17:00",
+        "status": "Done"
+      },
+      {
+        "mode": "Break",
+        "start": "17:00",
+        "end": "17:00",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "17:00",
+        "end": "17:00",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "17:03",
+        "end": "17:03",
+        "status": "Done"
+      },
+      {
+        "mode": "Break",
+        "start": "17:03",
+        "end": "17:03",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "17:03",
+        "end": "17:03",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "17:05",
+        "end": "17:05",
+        "status": "Done"
+      },
+      {
+        "mode": "Break",
+        "start": "17:05",
+        "end": "17:05",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "17:05",
+        "end": "17:05",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "17:08",
+        "end": "17:08",
+        "status": "Done"
+      },
+      {
+        "mode": "Break",
+        "start": "17:08",
+        "end": "17:08",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "17:08",
+        "end": "17:08",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "17:09",
+        "end": "17:09",
+        "status": "Done"
+      },
+      {
+        "mode": "Break",
+        "start": "17:09",
+        "end": "17:09",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "17:09",
+        "end": "17:10",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "17:11",
+        "end": "17:11",
+        "status": "Done"
+      },
+      {
+        "mode": "Break",
+        "start": "17:11",
+        "end": "17:11",
+        "status": "Done"
+      },
+      {
+        "mode": "Focus",
+        "start": "17:11",
+        "end": "17:11",
+        "status": "Done"
+      }
+    ],
+    "focus_sessions": 8
   }
 }
