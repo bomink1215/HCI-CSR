@@ -2,6 +2,7 @@ import flet as ft
 import asyncio
 from components.ui import mascot_widget
 from utils import firebase
+from utils import lang as lang_store
 
 BG_BASE   = "#F0F9F8"
 BG_CARD   = "#F4F6F8"
@@ -40,6 +41,14 @@ class AuthView:
         self.heading_ref         = ft.Ref()
         self.subheading_ref      = ft.Ref()
 
+    # ── 언어 변경 ────────────────────────────────────────────────────
+    def _set_lang(self, code: str):
+        lang_store.set_lang(code)
+        # Rebuild auth view so all translated strings refresh
+        self.page.controls.clear()
+        self.page.add(AuthView(self.page, self.on_login_success).build())
+        self.page.update()
+
     # ── 탭 전환 ─────────────────────────────────────────────────────
     def _switch_mode(self, mode: str):
         self.mode = mode
@@ -65,18 +74,22 @@ class AuthView:
         self._set_nick_msg("", ok=False)
 
         if self.submit_text_ref.current:
-            self.submit_text_ref.current.value = "Sign Up" if mode == "signup" else "Log In"
+            self.submit_text_ref.current.value = (
+                lang_store.t("signup_tab") if mode == "signup" else lang_store.t("login_tab")
+            )
             self.submit_text_ref.current.update()
 
         if self.heading_ref.current:
-            self.heading_ref.current.value = "Create an account" if mode == "signup" else "Welcome back"
+            self.heading_ref.current.value = (
+                lang_store.t("create_account") if mode == "signup" else lang_store.t("welcome_back")
+            )
             self.heading_ref.current.update()
 
         if self.subheading_ref.current:
             self.subheading_ref.current.value = (
-                "Join ZZOOK and start your journey"
+                lang_store.t("join_sub")
                 if mode == "signup"
-                else "Sign in to your account or create a new one"
+                else lang_store.t("sign_in_sub")
             )
             self.subheading_ref.current.update()
 
@@ -164,8 +177,14 @@ class AuthView:
                         and self.remember_me_ref.current.value
                     )
                     self.on_login_success(result)
-            except Exception:
-                self._set_error("Network error")
+            except Exception as ex:
+                import requests as _req
+                if isinstance(ex, _req.exceptions.Timeout):
+                    self._set_error("Connection timed out — check your internet")
+                elif isinstance(ex, _req.exceptions.ConnectionError):
+                    self._set_error("Cannot reach server — check your internet connection")
+                else:
+                    self._set_error(f"Network error: {ex}")
             finally:
                 self._set_loading(False)
 
@@ -180,7 +199,7 @@ class AuthView:
                 ref=t_ref,
                 content=ft.Text(
                     ref=tx_ref,
-                    value=label, size=13, font_family=FONT,
+                    value=label, size=15, font_family=FONT,
                     color=ACCENT if active else TEXT_MUT,
                     text_align=ft.TextAlign.CENTER,
                 ),
@@ -193,12 +212,29 @@ class AuthView:
                 alignment=ft.Alignment(0, 0),
             )
 
+        def _lang_btn(code: str):
+            is_active = lang_store.get() == code
+            return ft.Container(
+                content=ft.Text(
+                    code.upper(), size=13, font_family=FONT,
+                    color=ACCENT if is_active else TEXT_MUT,
+                    text_align=ft.TextAlign.CENTER,
+                    weight=ft.FontWeight.W_600 if is_active else ft.FontWeight.W_400,
+                ),
+                bgcolor=ACCENT_LT if is_active else "transparent",
+                border_radius=8,
+                border=ft.border.all(1, ACCENT if is_active else BORDER),
+                padding=ft.padding.symmetric(horizontal=16, vertical=8),
+                on_click=lambda _, c=code: self._set_lang(c),
+                animate=ft.Animation(120, ft.AnimationCurve.EASE_OUT),
+            )
+
         def _field(ref, hint, icon, password=False):
             return ft.TextField(
                 ref=ref,
                 hint_text=hint,
-                hint_style=ft.TextStyle(color=TEXT_MUT, font_family=FONT, size=13),
-                text_style=ft.TextStyle(color=TEXT_PRI, font_family=FONT, size=13),
+                hint_style=ft.TextStyle(color=TEXT_MUT, font_family=FONT, size=15),
+                text_style=ft.TextStyle(color=TEXT_PRI, font_family=FONT, size=15),
                 border_color=BORDER,
                 focused_border_color=ACCENT,
                 border_radius=10,
@@ -223,9 +259,9 @@ class AuthView:
                     ft.Container(width=12),
                     ft.Column(
                         controls=[
-                            ft.Text(title, size=13, color=TEXT_PRI, font_family=FONT,
+                            ft.Text(title, size=15, color=TEXT_PRI, font_family=FONT,
                                     weight=ft.FontWeight.W_600),
-                            ft.Text(desc, size=11, color=TEXT_MUT, font_family=FONT),
+                            ft.Text(desc, size=13, color=TEXT_MUT, font_family=FONT),
                         ],
                         spacing=1,
                     ),
@@ -250,8 +286,8 @@ class AuthView:
                                 fit="contain",
                             ),
                             ft.Container(height=4),
-                            ft.Text("Build your rhythm of focus and rest",
-                                    size=13, color=TEXT_MUT, font_family=FONT,
+                            ft.Text(lang_store.t("tagline"),
+                                    size=15, color=TEXT_MUT, font_family=FONT,
                                     text_align=ft.TextAlign.CENTER),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -262,16 +298,16 @@ class AuthView:
                         content=ft.Column(
                             controls=[
                                 _feature_row(ft.Icons.TIMER_OUTLINED,
-                                             "Pomodoro Timer",
-                                             "Stay focused with timed sessions"),
+                                             lang_store.t("feature_pomo"),
+                                             lang_store.t("feature_pomo_d")),
                                 ft.Container(height=16),
                                 _feature_row(ft.Icons.ACCESSIBILITY_NEW_OUTLINED,
-                                             "Posture Monitor",
-                                             "Keep your posture healthy"),
+                                             lang_store.t("feature_post"),
+                                             lang_store.t("feature_post_d")),
                                 ft.Container(height=16),
                                 _feature_row(ft.Icons.LEADERBOARD_OUTLINED,
-                                             "Leaderboard",
-                                             "Compete with friends"),
+                                             lang_store.t("feature_rank"),
+                                             lang_store.t("feature_rank_d")),
                             ],
                             spacing=0,
                         ),
@@ -298,18 +334,18 @@ class AuthView:
                 ft.Column(
                     controls=[
                         ft.Text(ref=self.heading_ref,
-                                value="Welcome back", size=22, color=TEXT_PRI,
+                                value=lang_store.t("welcome_back"), size=22, color=TEXT_PRI,
                                 font_family=FONT, weight=ft.FontWeight.W_700),
                         ft.Text(ref=self.subheading_ref,
-                                value="Sign in to your account or create a new one",
-                                size=12, color=TEXT_MUT, font_family=FONT),
+                                value=lang_store.t("sign_in_sub"),
+                                size=14, color=TEXT_MUT, font_family=FONT),
                         ft.Container(height=28),
                         # 탭
                         ft.Container(
                             content=ft.Row(
                                 controls=[
-                                    _tab("login",  "Log In",  self.tab_login_ref,  self.tab_login_text_ref),
-                                    _tab("signup", "Sign Up", self.tab_signup_ref, self.tab_signup_text_ref),
+                                    _tab("login",  lang_store.t("login_tab"),  self.tab_login_ref,  self.tab_login_text_ref),
+                                    _tab("signup", lang_store.t("signup_tab"), self.tab_signup_ref, self.tab_signup_text_ref),
                                 ],
                                 spacing=4,
                             ),
@@ -320,16 +356,16 @@ class AuthView:
                         ),
                         ft.Container(height=20),
                         # 입력 필드
-                        _field(self.username_ref, "ID", ft.Icons.PERSON_OUTLINE),
+                        _field(self.username_ref, lang_store.t("id_hint"), ft.Icons.PERSON_OUTLINE),
                         ft.Container(height=10),
-                        _field(self.password_ref, "Password", ft.Icons.LOCK_OUTLINE, password=True),
+                        _field(self.password_ref, lang_store.t("password_hint"), ft.Icons.LOCK_OUTLINE, password=True),
                         ft.Container(height=6),
                         # Remember me (로그인 전용)
                         ft.Checkbox(
                             ref=self.remember_me_ref,
-                            label="Remember me on this device",
+                            label=lang_store.t("remember_me"),
                             label_style=ft.TextStyle(
-                                size=12, color=TEXT_MUT, font_family=FONT,
+                                size=14, color=TEXT_MUT, font_family=FONT,
                             ),
                             fill_color={
                                 ft.ControlState.SELECTED: ACCENT,
@@ -346,14 +382,15 @@ class AuthView:
                                     ft.Row(
                                         controls=[
                                             ft.Container(
-                                                content=_field(self.nickname_ref, "Nickname",
+                                                content=_field(self.nickname_ref,
+                                                               lang_store.t("nickname_hint"),
                                                                ft.Icons.BADGE_OUTLINED),
                                                 expand=True,
                                             ),
                                             ft.Container(width=8),
                                             ft.Container(
                                                 ref=self.nick_check_btn_ref,
-                                                content=ft.Text("Check", size=12,
+                                                content=ft.Text(lang_store.t("check"), size=14,
                                                                 color="#F0F9F8", font_family=FONT,
                                                                 text_align=ft.TextAlign.CENTER),
                                                 bgcolor=ACCENT,
@@ -367,7 +404,7 @@ class AuthView:
                                     ),
                                     ft.Text(
                                         ref=self.nick_check_msg_ref,
-                                        value="", size=11, visible=False,
+                                        value="", size=13, visible=False,
                                         font_family=FONT,
                                     ),
                                     ft.Container(height=6),
@@ -380,7 +417,7 @@ class AuthView:
                         ft.Container(
                             content=ft.Text(
                                 ref=self.error_ref,
-                                value="", size=11, color=DANGER,
+                                value="", size=13, color=DANGER,
                                 font_family=FONT, visible=False,
                                 text_align=ft.TextAlign.CENTER,
                             ),
@@ -396,7 +433,7 @@ class AuthView:
                                         controls=[
                                             ft.Text(
                                                 ref=self.submit_text_ref,
-                                                value="Log In", size=14,
+                                                value=lang_store.t("login_tab"), size=16,
                                                 color="#F0F9F8", font_family=FONT,
                                             ),
                                         ],
@@ -423,6 +460,16 @@ class AuthView:
                                 blur_radius=12, color=ACCENT + "55",
                                 offset=ft.Offset(0, 3),
                             ),
+                        ),
+                        ft.Container(height=16),
+                        # ── 언어 선택 ────────────────────────────────
+                        ft.Row(
+                            controls=[
+                                _lang_btn("en"),
+                                _lang_btn("ko"),
+                            ],
+                            spacing=8,
+                            alignment=ft.MainAxisAlignment.CENTER,
                         ),
                     ],
                     spacing=0,

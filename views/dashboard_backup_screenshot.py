@@ -67,7 +67,6 @@ class DashboardView:
         self.dash_focus_avg_ref     = ft.Ref()
         self.dash_posture_avg_ref   = ft.Ref()
         self.pomo_cycles_ref        = ft.Ref()
-        self.show_tutorial_cb = None   # main.py에서 주입
 
     def update_pomodoro(self, remaining: int, total: int, mode: str, running: bool):
         mins, secs = remaining // 60, remaining % 60
@@ -555,6 +554,35 @@ class DashboardView:
                                             color=TEXT_MUT, font_family=FONT,
                                             weight=ft.FontWeight.W_400,
                                             no_wrap=False),
+                                        ft.Container(height=6),
+                                        ft.Container(
+                                            width=162,
+                                            ref=self.live_status_ref,
+                                            content=ft.Column(
+                                                controls=[
+                                                    ft.Row(
+                                                        controls=[
+                                                            ft.Container(
+                                                                ref=self.live_dot_ref,
+                                                                width=6, height=6,
+                                                                bgcolor=DANGER, border_radius=3,
+                                                            ),
+                                                            ft.Text(
+                                                                ref=self.live_text_ref,
+                                                                value=lang_store.t("live_off"),
+                                                                size=11, color=DANGER,
+                                                                font_family=FONT,
+                                                            ),
+                                                        ],
+                                                        spacing=5,
+                                                    ),
+                                                ],
+                                                spacing=0,
+                                            ),
+                                            bgcolor="#FFF0F0", border_radius=6,
+                                            padding=ft.padding.only(
+                                                left=8, top=4, right=12, bottom=4),
+                                        ),
                                     ],
                                     spacing=0,
                                 ),
@@ -841,6 +869,13 @@ class DashboardView:
                         ft.Row(
                             controls=[
                                 ft.Text(lang_store.t("ranking"), size=17, color=TEXT_PRI, font_family=FONT),
+                                ft.Container(
+                                    content=ft.Text(lang_store.t("live"), size=12, color=ACCENT,
+                                                    font_family=FONT),
+                                    bgcolor=ACCENT_LT, border_radius=6,
+                                    padding=ft.padding.only(left=6, top=2, right=6, bottom=2),
+                                    border=ft.border.all(1.5, "#00C9A7"),
+                                ),
                             ],
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         ),
@@ -915,7 +950,7 @@ class DashboardView:
             vertical_alignment=ft.CrossAxisAlignment.START,
         )
 
-        main_content = ft.Container(
+        return ft.Container(
             content=ft.Column(
                 controls=[
                     header,
@@ -931,5 +966,3 @@ class DashboardView:
             padding=ft.padding.only(left=22, top=12, right=22, bottom=12),
             bgcolor=BG_BASE,
         )
-
-        return main_content

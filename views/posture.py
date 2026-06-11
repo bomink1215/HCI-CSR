@@ -6,6 +6,7 @@ import os
 import tempfile
 import statistics
 from utils import alert_manager, score_store
+from utils import lang as lang_store
 
 BG_BASE   = "#F0F9F8"
 BG_CARD   = "#F4F6F8"
@@ -327,7 +328,7 @@ class PostureView:
             _cv2.destroyAllWindows()
             alert_manager.set_monitoring(False)
             self._set_cam_on(False)
-            self._set_status("Click Start Monitoring to begin")
+            self._set_status(lang_store.t("click_to_begin"))
             self._reset_score_ui()
             return
 
@@ -401,14 +402,16 @@ class PostureView:
                     break
 
         finally:
+            self.monitoring = False
             cap.release()
             landmarker.close()
             _cv2.destroyAllWindows()
             alert_manager.set_monitoring(False)
             self._set_cam_on(False)
             self._set_calib_done(False)
-            self._set_status("Click Start Monitoring to begin")
+            self._set_status(lang_store.t("click_to_begin"))
             self._reset_score_ui()
+            self._reset_btn_state()
             try:
                 self.page.update()
             except Exception:
@@ -437,7 +440,7 @@ class PostureView:
                     self.fps_ref.current.update()
                 if self.issue_col_ref.current:
                     self.issue_col_ref.current.controls = [
-                        ft.Text(f"• {i}", size=11, color=DANGER, font_family="DOSSaemmul")
+                        ft.Text(f"• {i}", size=13, color=DANGER, font_family="DOSSaemmul")
                         for i in issues[1:]
                     ]
                     self.issue_col_ref.current.update()
@@ -467,6 +470,23 @@ class PostureView:
                 pass
         self.page.run_task(_do)
 
+    def _reset_btn_state(self):
+        """카메라 창이 닫혔을 때 버튼을 'Start Monitoring' 상태로 복원."""
+        async def _do():
+            try:
+                btn = self.toggle_btn_ref.current
+                if not btn:
+                    return
+                row: ft.Row = btn.content
+                # _toggle uses "" (play) / "" (stop)
+                row.controls[0].value = ""
+                row.controls[1].value = lang_store.t("start_monitoring")
+                btn.bgcolor = ACCENT
+                btn.update()
+            except Exception:
+                pass
+        self.page.run_task(_do)
+
     def _set_cam_on(self, on: bool):
         async def _do():
             try:
@@ -474,7 +494,7 @@ class PostureView:
                     self.cam_dot_ref.current.bgcolor = ACCENT if on else DANGER
                     self.cam_dot_ref.current.update()
                 if self.cam_label_ref.current:
-                    self.cam_label_ref.current.value = "Live Detection On" if on else "Live Detection Off"
+                    self.cam_label_ref.current.value = lang_store.t("cam_on") if on else lang_store.t("cam_off")
                     self.cam_label_ref.current.color = ACCENT if on else DANGER
                     self.cam_label_ref.current.update()
                 if self.cam_badge_ref.current:
@@ -504,7 +524,7 @@ class PostureView:
                 icon_row: ft.Row = col.controls[0]
                 icon_row.controls[0].name  = ft.Icons.CHECK_CIRCLE if done else ft.Icons.RADIO_BUTTON_UNCHECKED
                 icon_row.controls[0].color = ACCENT if done else TEXT_MUT
-                icon_row.controls[1].value = "Baseline posture set ✓" if done else "Baseline not set"
+                icon_row.controls[1].value = lang_store.t("baseline_set") if done else lang_store.t("baseline_not_set")
                 icon_row.controls[1].color = ACCENT if done else TEXT_MUT
                 self.calib_card_ref.current.update()
         except Exception:
@@ -516,14 +536,14 @@ class PostureView:
         row: ft.Row = btn.content
         if self.monitoring:
             row.controls[0].value = "\ue047"
-            row.controls[1].value = "Stop Monitoring"
+            row.controls[1].value = lang_store.t("stop_monitoring")
             btn.bgcolor = DANGER
             btn.update()
             self._thread = threading.Thread(target=self._camera_worker, daemon=True)
             self._thread.start()
         else:
             row.controls[0].value = "\ue037"
-            row.controls[1].value = "Start Monitoring"
+            row.controls[1].value = lang_store.t("start_monitoring")
             btn.bgcolor = ACCENT
             btn.update()
 
@@ -546,7 +566,7 @@ class PostureView:
                                         size=36, weight=ft.FontWeight.W_500,
                                         color=ACCENT, font_family="DOSSaemmul",
                                         text_align=ft.TextAlign.CENTER),
-                                ft.Text("Posture Score", size=11, color=TEXT_MUT,
+                                ft.Text(lang_store.t("posture_score_label"), size=13, color=TEXT_MUT,
                                         font_family="DOSSaemmul",
                                         text_align=ft.TextAlign.CENTER),
                             ],
@@ -570,22 +590,21 @@ class PostureView:
                         controls=[
                             ft.Icon(ft.Icons.RADIO_BUTTON_UNCHECKED,
                                     size=16, color=TEXT_MUT),
-                            ft.Text("Baseline not set", size=12,
+                            ft.Text(lang_store.t("baseline_not_set"), size=14,
                                     color=TEXT_MUT, font_family="DOSSaemmul"),
                         ],
                         spacing=8,
                     ),
                     ft.Text(
-                        "When monitoring starts, a 3s countdown begins.\n"
-                        "Hold a good posture for 3s to set your baseline.",
-                        size=11, color=TEXT_SEC, font_family="DOSSaemmul",
+                        lang_store.t("calib_guide"),
+                        size=13, color=TEXT_PRI, font_family="DOSSaemmul",
                     ),
                 ],
                 spacing=6,
             ),
-            bgcolor=BG_CARD2,
+            bgcolor=ACCENT_LT,
             border_radius=10,
-            border=ft.border.all(1, BORDER),
+            border=ft.border.all(1, ACCENT + "88"),
             padding=ft.padding.only(left=14, top=10, right=14, bottom=10),
         )
 
@@ -593,8 +612,8 @@ class PostureView:
             content=ft.Column(
                 controls=[
                     ft.Icon(ft.Icons.ACCESSIBILITY, size=52, color=BORDER),
-                    ft.Text("Press Start Monitoring\nto open the camera window",
-                            size=14, color=TEXT_MUT, font_family="DOSSaemmul",
+                    ft.Text(lang_store.t("press_start"),
+                            size=16, color=TEXT_MUT, font_family="DOSSaemmul",
                             text_align=ft.TextAlign.CENTER),
                     ft.Container(height=8),
                     ft.Row(
@@ -607,7 +626,7 @@ class PostureView:
                                                      width=6, height=6, bgcolor=DANGER,
                                                      border_radius=3),
                                         ft.Text(ref=self.cam_label_ref,
-                                                value="Live Detection Off", size=10,
+                                                value=lang_store.t("cam_off"), size=12,
                                                 color=DANGER, font_family="DOSSaemmul"),
                                     ],
                                     spacing=5,
@@ -619,13 +638,14 @@ class PostureView:
                         alignment=ft.MainAxisAlignment.CENTER,
                     ),
                     ft.Text(ref=self.fps_ref, value="",
-                            size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
+                            size=13, color=TEXT_MUT, font_family="DOSSaemmul"),
                     ft.Container(height=4),
                     ft.Container(
+                        ref=self.toggle_btn_ref,
                         content=ft.Row(
                             controls=[
                                 ft.Icon(ft.Icons.PLAY_ARROW, size=18, color="#F0F9F8"),
-                                ft.Text("Start Monitoring", size=14,
+                                ft.Text(lang_store.t("start_monitoring"), size=16,
                                         weight=ft.FontWeight.W_400,
                                         color="#F0F9F8", font_family="DOSSaemmul"),
                             ],
@@ -639,6 +659,8 @@ class PostureView:
                         shadow=ft.BoxShadow(blur_radius=12, color=ACCENT + "55",
                                             offset=ft.Offset(0, 4)),
                     ),
+                    ft.Container(height=10),
+                    calib_card,
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
@@ -661,7 +683,7 @@ class PostureView:
                         "\"https://storage.googleapis.com/mediapipe-models/"
                         "pose_landmarker/pose_landmarker_lite/float16/latest/"
                         "pose_landmarker_lite.task\"",
-                        size=11, color=WARNING, font_family="DOSSaemmul",
+                        size=13, color=WARNING, font_family="DOSSaemmul",
                     ),
                 ],
                 spacing=8,
@@ -678,15 +700,15 @@ class PostureView:
                 card(
                     ft.Column(
                         controls=[
-                            ft.Text("Live Score", size=14, weight=ft.FontWeight.W_400,
+                            ft.Text(lang_store.t("live_score"), size=16, weight=ft.FontWeight.W_400,
                                     color=TEXT_PRI, font_family="DOSSaemmul"),
                             ft.Container(expand=True),
                             ft.Container(content=self._score_ring(),
                                          alignment=ft.Alignment(0, 0)),
                             ft.Container(height=10),
                             ft.Text(ref=self.status_ref,
-                                    value="Click Start Monitoring to begin",
-                                    size=12, color=TEXT_MUT,
+                                    value=lang_store.t("click_to_begin"),
+                                    size=14, color=TEXT_MUT,
                                     font_family="DOSSaemmul",
                                     text_align=ft.TextAlign.CENTER),
                             ft.Container(height=4),
@@ -698,8 +720,6 @@ class PostureView:
                     ),
                     expand=True,
                 ),
-                ft.Container(height=10),
-                calib_card,
             ],
             width=240, spacing=0,
         )
@@ -720,10 +740,10 @@ class PostureView:
                 controls=[
                     ft.Column(
                         controls=[
-                            ft.Text("Posture Correction", size=26, weight=ft.FontWeight.W_400,
+                            ft.Text(lang_store.t("posture_title"), size=26, weight=ft.FontWeight.W_400,
                                     color=TEXT_PRI, font_family="DOSSaemmul"),
-                            ft.Text("Track and improve your posture with real-time AI detection",
-                                    size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
+                            ft.Text(lang_store.t("posture_sub"),
+                                    size=15, color=TEXT_SEC, font_family="DOSSaemmul"),
                         ],
                         spacing=2,
                     ),

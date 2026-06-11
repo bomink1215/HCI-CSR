@@ -3,6 +3,7 @@ import asyncio
 from datetime import date as _date
 from components.ui import card
 from utils import firebase, session, score_store
+from utils import lang as lang_store
 
 BG_BASE   = "#F0F9F8"
 BG_CARD   = "#FFFFFF"
@@ -174,12 +175,12 @@ class RankingView:
             for u in users:
                 u["focus_min"] = (u.get("today_focus_min", 0)
                                   if u.get("today_date") == today_str else 0)
-            return "Focus", _fmt_min
+            return lang_store.t("metric_focus"), _fmt_min
         else:
             for u in users:
                 u["focus_min"] = (u.get("today_posture_score", 0)
                                   if u.get("today_posture_date") == today_str else 0)
-            return "Posture", lambda v: f"{v}pts"
+            return lang_store.t("metric_posture"), lambda v: f"{v}pts"
 
     # ── 전체 유저 로드 ────────────────────────────────────────────────
     async def _load_all_users(self):
@@ -210,7 +211,7 @@ class RankingView:
         if my_idx is not None:
             my_data = users[my_idx]
             if self.my_rank_ref.current:
-                self.my_rank_ref.current.value = f"#{my_idx + 1} today"
+                self.my_rank_ref.current.value = lang_store.t("rank_today_fmt").format(n=my_idx + 1)
                 self.my_rank_ref.current.update()
             if self.my_val_ref.current:
                 self.my_val_ref.current.value = fmt(my_data["focus_min"])
@@ -220,7 +221,7 @@ class RankingView:
                 self.my_unit_ref.current.update()
         else:
             if self.my_rank_ref.current:
-                self.my_rank_ref.current.value = "No record today"
+                self.my_rank_ref.current.value = lang_store.t("no_record_today")
                 self.my_rank_ref.current.update()
 
         rows = [
@@ -230,7 +231,7 @@ class RankingView:
         ]
         if not rows:
             rows = [ft.Container(
-                content=ft.Text("No data yet.", size=12, color=TEXT_MUT,
+                content=ft.Text(lang_store.t("no_data_yet"), size=14, color=TEXT_MUT,
                                 font_family=FONT, text_align=ft.TextAlign.CENTER),
                 alignment=ft.Alignment(0, 0),
                 padding=ft.padding.symmetric(vertical=24),
@@ -274,7 +275,7 @@ class RankingView:
         my_idx = next((i for i, u in enumerate(combined) if u.get("uid") == my_uid), None)
         if my_data is not None:
             if self.my_rank_ref.current:
-                rank_str = f"#{my_idx + 1} today" if my_idx is not None else "No record today"
+                rank_str = lang_store.t("rank_today_fmt").format(n=my_idx + 1) if my_idx is not None else lang_store.t("no_record_today")
                 self.my_rank_ref.current.value = rank_str
                 self.my_rank_ref.current.update()
             if self.my_val_ref.current:
@@ -285,7 +286,7 @@ class RankingView:
                 self.my_unit_ref.current.update()
         else:
             if self.my_rank_ref.current:
-                self.my_rank_ref.current.value = "No record today"
+                self.my_rank_ref.current.value = lang_store.t("no_record_today")
                 self.my_rank_ref.current.update()
 
         # 친구 요청 섹션
@@ -293,7 +294,7 @@ class RankingView:
             req_controls = []
             if requests:
                 req_controls.append(
-                    ft.Text("Friend Requests", size=13, color=TEXT_PRI, font_family=FONT)
+                    ft.Text(lang_store.t("friend_requests"), size=15, color=TEXT_PRI, font_family=FONT)
                 )
                 for req in requests:
                     req_controls.append(self._request_row(req))
@@ -310,8 +311,8 @@ class RankingView:
         if not rows:
             rows = [ft.Container(
                 content=ft.Text(
-                    "No friends yet.\nSearch by nickname above to send a friend request!",
-                    size=12, color=TEXT_MUT, font_family=FONT,
+                    lang_store.t("no_friends_yet"),
+                    size=14, color=TEXT_MUT, font_family=FONT,
                     text_align=ft.TextAlign.CENTER,
                 ),
                 alignment=ft.Alignment(0, 0),
@@ -326,7 +327,7 @@ class RankingView:
     def _send_friend_request(self, e=None):
         to_nick = (self.add_nick_ref.current.value or "").strip()
         if not to_nick:
-            self._set_add_msg("Enter a nickname", ok=False)
+            self._set_add_msg(lang_store.t("err_enter_nick"), ok=False)
             return
         user = self._user()
 
@@ -339,7 +340,7 @@ class RankingView:
             if "error" in result:
                 self._set_add_msg(result["error"], ok=False)
             else:
-                self._set_add_msg(f"Request sent to {to_nick} ✓", ok=True)
+                self._set_add_msg(lang_store.t("request_sent_fmt").format(nick=to_nick), ok=True)
                 if self.add_nick_ref.current:
                     self.add_nick_ref.current.value = ""
                     self.add_nick_ref.current.update()
@@ -409,7 +410,7 @@ class RankingView:
                 controls=[
                     ft.Container(
                         content=ft.Text(
-                            medal, size=13 if rank <= 3 else 11,
+                            medal, size=15 if rank <= 3 else 11,
                             color=val_color if is_me else TEXT_MUT,
                             font_family=FONT,
                         ),
@@ -417,7 +418,7 @@ class RankingView:
                     ),
                     ft.Container(
                         content=ft.Text(
-                            nickname[:1].upper(), size=12,
+                            nickname[:1].upper(), size=14,
                             color="#FFFFFF", font_family=FONT,
                         ),
                         width=32, height=32, border_radius=16,
@@ -427,13 +428,13 @@ class RankingView:
                         controls=[
                             ft.Row(
                                 controls=[
-                                    ft.Text(nickname, size=13,
+                                    ft.Text(nickname, size=15,
                                             color=val_color if is_me else TEXT_PRI,
                                             font_family=FONT),
                                     *(
                                         [ft.Container(
                                             content=ft.Text(
-                                                "Me", size=9,
+                                                lang_store.t("me_badge"), size=11,
                                                 color="#FFFFFF", font_family=FONT,
                                             ),
                                             bgcolor=val_color, border_radius=4,
@@ -447,8 +448,8 @@ class RankingView:
                                 spacing=6,
                             ),
                             ft.Text(
-                                f"{sessions} sessions" if unit_label == "Focus" else "avg today",
-                                size=11, color=TEXT_MUT, font_family=FONT,
+                                lang_store.t("sessions_fmt").format(n=sessions) if unit_label == lang_store.t("metric_focus") or unit_label == "Focus" else lang_store.t("avg_today"),
+                                size=13, color=TEXT_MUT, font_family=FONT,
                             ),
                         ],
                         spacing=2, expand=True,
@@ -456,11 +457,11 @@ class RankingView:
                     ft.Column(
                         controls=[
                             ft.Text(
-                                value_str, size=13,
+                                value_str, size=15,
                                 color=val_color if is_me else TEXT_PRI,
                                 font_family=FONT,
                             ),
-                            ft.Text(unit_label, size=10, color=TEXT_MUT, font_family=FONT),
+                            ft.Text(unit_label, size=12, color=TEXT_MUT, font_family=FONT),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.END,
                         spacing=1,
@@ -486,26 +487,26 @@ class RankingView:
             content=ft.Row(
                 controls=[
                     ft.Container(
-                        content=ft.Text(nick[:1].upper(), size=12,
+                        content=ft.Text(nick[:1].upper(), size=14,
                                         color="#FFFFFF", font_family=FONT),
                         width=32, height=32, border_radius=16,
                         bgcolor=color, alignment=ft.Alignment(0, 0),
                     ),
                     ft.Column(
                         controls=[
-                            ft.Text(nick, size=13, color=TEXT_PRI, font_family=FONT),
-                            ft.Text(f"@{uname}", size=11, color=TEXT_MUT, font_family=FONT),
+                            ft.Text(nick, size=15, color=TEXT_PRI, font_family=FONT),
+                            ft.Text(f"@{uname}", size=13, color=TEXT_MUT, font_family=FONT),
                         ],
                         spacing=2, expand=True,
                     ),
                     ft.Container(
-                        content=ft.Text("Accept", size=11, color="#FFFFFF", font_family=FONT),
+                        content=ft.Text(lang_store.t("accept"), size=13, color="#FFFFFF", font_family=FONT),
                         bgcolor=ACCENT, border_radius=8,
                         padding=ft.padding.symmetric(horizontal=14, vertical=7),
                         on_click=lambda _, r=req: self._accept_request(r),
                     ),
                     ft.Container(
-                        content=ft.Text("Reject", size=11, color=DANGER, font_family=FONT),
+                        content=ft.Text(lang_store.t("reject_btn"), size=13, color=DANGER, font_family=FONT),
                         border=ft.border.all(1.5, DANGER), border_radius=8,
                         padding=ft.padding.symmetric(horizontal=14, vertical=7),
                         on_click=lambda _, r=req: self._reject_request(r),
@@ -546,8 +547,8 @@ class RankingView:
                         controls=[
                             ft.Text(ref=self.my_nick_ref, value=nickname,
                                     size=15, color=TEXT_PRI, font_family=FONT),
-                            ft.Text(ref=self.my_rank_ref, value="Loading...",
-                                    size=13, color=ACCENT, font_family=FONT),
+                            ft.Text(ref=self.my_rank_ref, value=lang_store.t("loading"),
+                                    size=15, color=ACCENT, font_family=FONT),
                         ],
                         spacing=4, expand=True,
                     ),
@@ -555,8 +556,8 @@ class RankingView:
                         controls=[
                             ft.Text(ref=self.my_val_ref, value="—",
                                     size=20, color=ACCENT, font_family=FONT),
-                            ft.Text(ref=self.my_unit_ref, value="Today's Focus",
-                                    size=11, color=TEXT_MUT, font_family=FONT),
+                            ft.Text(ref=self.my_unit_ref, value=lang_store.t("todays_focus_label"),
+                                    size=13, color=TEXT_MUT, font_family=FONT),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.END,
                         spacing=2,
@@ -574,7 +575,7 @@ class RankingView:
             return ft.Container(
                 ref=m_ref,
                 content=ft.Text(
-                    ref=mt_ref, value=label, size=13, font_family=FONT,
+                    ref=mt_ref, value=label, size=15, font_family=FONT,
                     color=color if active else TEXT_MUT,
                     text_align=ft.TextAlign.CENTER,
                 ),
@@ -590,10 +591,10 @@ class RankingView:
         metric_bar = ft.Container(
             content=ft.Row(
                 controls=[
-                    _metric_btn("focus",   "Focus",
+                    _metric_btn("focus",   lang_store.t("metric_focus"),
                                 self.metric_focus_ref,   self.metric_focus_text_ref,
                                 LEMON, LEMON_LT),
-                    _metric_btn("posture", "Posture",
+                    _metric_btn("posture", lang_store.t("metric_posture"),
                                 self.metric_posture_ref, self.metric_posture_text_ref,
                                 PINK, PINK_LT),
                 ],
@@ -611,7 +612,7 @@ class RankingView:
             return ft.Container(
                 ref=t_ref,
                 content=ft.Text(
-                    ref=tx_ref, value=label, size=13, font_family=FONT,
+                    ref=tx_ref, value=label, size=15, font_family=FONT,
                     color=ACCENT if active else TEXT_MUT,
                     text_align=ft.TextAlign.CENTER,
                 ),
@@ -627,9 +628,9 @@ class RankingView:
         tab_bar = ft.Container(
             content=ft.Row(
                 controls=[
-                    _tab_btn("friends", "Friends",
+                    _tab_btn("friends", lang_store.t("tab_friends"),
                              self.tab_friends_ref, self.tab_friends_text_ref),
-                    _tab_btn("all",     "All Users",
+                    _tab_btn("all",     lang_store.t("tab_all_users"),
                              self.tab_all_ref,     self.tab_all_text_ref),
                 ],
                 spacing=4,
@@ -667,19 +668,19 @@ class RankingView:
                     ft.Container(
                         content=ft.Column(
                             controls=[
-                                ft.Text("Add Friend", size=13, color=TEXT_PRI, font_family=FONT),
+                                ft.Text(lang_store.t("add_friend"), size=15, color=TEXT_PRI, font_family=FONT),
                                 ft.Container(height=6),
                                 ft.Row(
                                     controls=[
                                         ft.Container(
                                             content=ft.TextField(
                                                 ref=self.add_nick_ref,
-                                                hint_text="Search by nickname",
+                                                hint_text=lang_store.t("search_by_nick"),
                                                 hint_style=ft.TextStyle(
-                                                    color=TEXT_MUT, font_family=FONT, size=13,
+                                                    color=TEXT_MUT, font_family=FONT, size=15,
                                                 ),
                                                 text_style=ft.TextStyle(
-                                                    color=TEXT_PRI, font_family=FONT, size=13,
+                                                    color=TEXT_PRI, font_family=FONT, size=15,
                                                 ),
                                                 border_color=BORDER,
                                                 focused_border_color=ACCENT,
@@ -697,7 +698,7 @@ class RankingView:
                                         ft.Container(width=8),
                                         ft.Container(
                                             content=ft.Text(
-                                                "Send", size=12, color="#FFFFFF",
+                                                lang_store.t("send_btn"), size=14, color="#FFFFFF",
                                                 font_family=FONT,
                                                 text_align=ft.TextAlign.CENTER,
                                             ),
@@ -713,7 +714,7 @@ class RankingView:
                                 ),
                                 ft.Text(
                                     ref=self.add_msg_ref,
-                                    value="", size=11, font_family=FONT,
+                                    value="", size=13, font_family=FONT,
                                 ),
                             ],
                             spacing=4,
@@ -745,9 +746,9 @@ class RankingView:
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text("Ranking", size=26, color=TEXT_PRI, font_family=FONT),
-                    ft.Text("Today's leaderboard",
-                            size=13, color=TEXT_MUT, font_family=FONT),
+                    ft.Text(lang_store.t("ranking"), size=26, color=TEXT_PRI, font_family=FONT),
+                    ft.Text(lang_store.t("ranking_sub"),
+                            size=15, color=TEXT_MUT, font_family=FONT),
                     ft.Container(height=10),
                     my_card,
                     ft.Container(height=12),

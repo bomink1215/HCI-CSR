@@ -1,4 +1,5 @@
 import flet as ft
+from utils import lang as lang_store
 import calendar as _cal
 from components.ui import card
 from datetime import date
@@ -41,13 +42,13 @@ class TodoView:
         self.new_priority = "Medium"
 
         self.new_text = ft.TextField(
-            hint_text="What do you need to do?",
+            hint_text=lang_store.t("add_task_hint"),
             bgcolor="transparent",
             border_color="transparent",
             focused_border_color="transparent",
             color=TEXT_PRI,
-            hint_style=ft.TextStyle(color=TEXT_MUT, size=14),
-            text_style=ft.TextStyle(color=TEXT_PRI, size=14),
+            hint_style=ft.TextStyle(color=TEXT_MUT, size=16),
+            text_style=ft.TextStyle(color=TEXT_PRI, size=16),
             cursor_color=ACCENT,
             border_radius=0,
             expand=True,
@@ -55,19 +56,9 @@ class TodoView:
             content_padding=ft.padding.symmetric(horizontal=4, vertical=8),
         )
 
-        self.due_field = ft.TextField(
-            hint_text="MM-DD",
-            hint_style=ft.TextStyle(color=TEXT_PRI, size=11, font_family="DOSSaemmul"),
-            text_style=ft.TextStyle(color=TEXT_PRI, size=11, font_family="DOSSaemmul"),
-            bgcolor="transparent",
-            border_color="transparent",
-            focused_border_color="transparent",
-            cursor_color=ACCENT,
-            border_radius=0,
-            width=50,
-            height=24,
-            content_padding=ft.padding.symmetric(horizontal=2, vertical=0),
-        )
+        # due_field는 값 저장용(레이아웃 미포함), 화면엔 due_text_ref 사용
+        self.due_field = ft.TextField(hint_text="MM-DD")
+        self.due_text_ref = ft.Ref()
 
         self.task_col_ref       = ft.Ref()
         self.cat_row_ref        = ft.Ref()
@@ -95,7 +86,7 @@ class TodoView:
                 ft.Row(
                     controls=[
                         ft.Container(
-                            content=ft.Text(h, size=9, color=TEXT_MUT,
+                            content=ft.Text(h, size=11, color=TEXT_MUT,
                                             font_family="DOSSaemmul",
                                             text_align=ft.TextAlign.CENTER),
                             width=34, alignment=ft.Alignment(0, 0),
@@ -116,15 +107,18 @@ class TodoView:
                         is_past  = d < today
 
                         def on_day(e, sel=d):
-                            self.due_field.value = f"{sel.month}/{sel.day}"
-                            self.due_field.update()
+                            val = f"{sel.month}/{sel.day}"
+                            self.due_field.value = val
+                            if self.due_text_ref.current:
+                                self.due_text_ref.current.value = val
+                                self.due_text_ref.current.update()
                             dlg.current.open = False
                             self.page.update()
 
                         day_cells.append(
                             ft.Container(
                                 content=ft.Text(
-                                    str(day), size=12,
+                                    str(day), size=14,
                                     color="#F0F9F8" if is_today else (TEXT_MUT + "55" if is_past else TEXT_PRI),
                                     font_family="DOSSaemmul",
                                     text_align=ft.TextAlign.CENTER,
@@ -183,7 +177,7 @@ class TodoView:
                                 ft.Text(
                                     ref=title_ref,
                                     value=f"{_cal.month_name[today.month]} {today.year}",
-                                    size=13, color=TEXT_PRI, font_family="DOSSaemmul",
+                                    size=15, color=TEXT_PRI, font_family="DOSSaemmul",
                                     expand=True, text_align=ft.TextAlign.CENTER,
                                 ),
                                 ft.IconButton(
@@ -256,8 +250,8 @@ class TodoView:
             return ft.Container(
                 content=ft.Row(
                     controls=[
-                        ft.Icon(ft.Icons.CALENDAR_TODAY_OUTLINED, size=9, color=border_color),
-                        ft.Text(label, size=10, color=border_color, font_family="DOSSaemmul"),
+                        ft.Icon(ft.Icons.CALENDAR_TODAY_OUTLINED, size=11, color=border_color),
+                        ft.Text(label, size=12, color=border_color, font_family="DOSSaemmul"),
                     ],
                     spacing=3,
                     tight=True,
@@ -291,7 +285,7 @@ class TodoView:
         due_chip = self._due_label(task.get("due", ""))
         chips = [
             ft.Container(
-                content=ft.Text(task["priority"], size=10, color=pcolor,
+                content=ft.Text(task["priority"], size=12, color=pcolor,
                                 font_family="DOSSaemmul"),
                 bgcolor="transparent",
                 border=ft.border.all(1.5, pcolor),
@@ -308,7 +302,7 @@ class TodoView:
             content=ft.Row(
                 controls=[
                     ft.Container(
-                        content=ft.Icon(ft.Icons.DONE, size=12,
+                        content=ft.Icon(ft.Icons.DONE, size=14,
                                         color="#F0F9F8" if done else "transparent"),
                         width=20, height=20,
                         border_radius=5,
@@ -321,7 +315,7 @@ class TodoView:
                         controls=[
                             ft.Text(
                                 task["title"],
-                                size=13,
+                                size=15,
                                 color=TEXT_MUT if done else TEXT_PRI,
                                 font_family="DOSSaemmul",
                                 expand=True,
@@ -336,10 +330,10 @@ class TodoView:
                         expand=True,
                     ),
                     ft.Container(
-                        content=ft.Icon(ft.Icons.DELETE_OUTLINE, size=14, color=TEXT_MUT),
+                        content=ft.Icon(ft.Icons.DELETE_OUTLINE, size=16, color=TEXT_MUT),
                         on_click=delete,
                         padding=4,
-                        tooltip="Delete",
+                        tooltip=lang_store.t("stat_done"),
                     ),
                 ],
                 spacing=10,
@@ -369,7 +363,7 @@ class TodoView:
                 self.cat_row_ref.current.update()
 
         return ft.Container(
-            content=ft.Text(label, size=11,
+            content=ft.Text(label, size=13,
                             color=color if is_active else TEXT_MUT,
                             font_family="DOSSaemmul"),
             bgcolor="transparent",
@@ -393,7 +387,7 @@ class TodoView:
                 self.priority_row_ref.current.update()
 
         return ft.Container(
-            content=ft.Text(label, size=11,
+            content=ft.Text(label, size=13,
                             color=color if is_active else TEXT_MUT,
                             font_family="DOSSaemmul"),
             bgcolor="transparent",
@@ -409,8 +403,8 @@ class TodoView:
         if not tasks:
             return [
                 ft.Container(
-                    content=ft.Text("No tasks yet. Add one above!",
-                                    size=13, color=TEXT_MUT, font_family="DOSSaemmul",
+                    content=ft.Text(lang_store.t("no_tasks_yet"),
+                                    size=15, color=TEXT_MUT, font_family="DOSSaemmul",
                                     text_align=ft.TextAlign.CENTER),
                     alignment=ft.Alignment(0, 0),
                     padding=ft.padding.only(top=32),
@@ -434,9 +428,9 @@ class TodoView:
                 ft.Row(
                     controls=[
                         ft.Container(width=3, height=13, bgcolor=color, border_radius=2),
-                        ft.Text(cat, size=12, color=color, font_family="DOSSaemmul",
+                        ft.Text(cat, size=14, color=color, font_family="DOSSaemmul",
                                 weight=ft.FontWeight.W_600),
-                        ft.Text(f"{done_n}/{len(cat_tasks)}", size=10, color=TEXT_MUT,
+                        ft.Text(f"{done_n}/{len(cat_tasks)}", size=12, color=TEXT_MUT,
                                 font_family="DOSSaemmul"),
                     ],
                     spacing=8,
@@ -453,7 +447,7 @@ class TodoView:
         if others:
             sections.append(ft.Row(controls=[
                 ft.Container(width=3, height=13, bgcolor=TEXT_MUT, border_radius=2),
-                ft.Text("Other", size=12, color=TEXT_MUT, font_family="DOSSaemmul"),
+                ft.Text(lang_store.t("other_cat"), size=14, color=TEXT_MUT, font_family="DOSSaemmul"),
             ], spacing=8))
             for task in sorted(others, key=lambda t: (t["done"], order.get(t["priority"], 1))):
                 sections.append(self._task_tile(task))
@@ -469,7 +463,7 @@ class TodoView:
             due   = task.get("due", "")
             label = due[5:].replace("-", "/") if len(due) >= 7 else ""
             reason_color = ACCENT if task.get("reason") == "done" else DANGER
-            reason_text  = "✓ Done" if task.get("reason") == "done" else "⏰ Expired"
+            reason_text  = lang_store.t("done_reason") if task.get("reason") == "done" else lang_store.t("expired_reason")
             at = task.get("archived_at", "")
             at_label = at[5:].replace("-", "/") if len(at) >= 7 else at
             pcolor = PRIORITY_COLORS.get(task.get("priority", ""), TEXT_MUT)
@@ -481,19 +475,19 @@ class TodoView:
                                      height=36, alignment=ft.Alignment(0, 0)),
                         ft.Column(
                             controls=[
-                                ft.Text(task["title"], size=12, color=TEXT_PRI,
+                                ft.Text(task["title"], size=14, color=TEXT_PRI,
                                         font_family="DOSSaemmul",
                                         spans=[ft.TextSpan(style=ft.TextStyle(
                                             decoration=ft.TextDecoration.LINE_THROUGH
                                         ))] if task.get("done") else []),
                                 ft.Row(
                                     controls=[
-                                        ft.Text(reason_text, size=10, color=reason_color,
+                                        ft.Text(reason_text, size=12, color=reason_color,
                                                 font_family="DOSSaemmul"),
-                                        ft.Text(f"due {label}" if label else "",
-                                                size=10, color=TEXT_MUT, font_family="DOSSaemmul"),
-                                        ft.Text(f"archived {at_label}",
-                                                size=10, color=TEXT_MUT, font_family="DOSSaemmul"),
+                                        ft.Text(f'{lang_store.t("due_prefix")} {label}' if label else "",
+                                                size=12, color=TEXT_MUT, font_family="DOSSaemmul"),
+                                        ft.Text(f'{lang_store.t("archived_at_label")} {at_label}',
+                                                size=12, color=TEXT_MUT, font_family="DOSSaemmul"),
                                     ],
                                     spacing=8,
                                 ),
@@ -511,7 +505,7 @@ class TodoView:
             )
 
         rows = [_row(t) for t in archives] if archives else [
-            ft.Text("No archived tasks yet.", size=13, color=TEXT_MUT,
+            ft.Text(lang_store.t("no_archive"), size=15, color=TEXT_MUT,
                     font_family="DOSSaemmul", text_align=ft.TextAlign.CENTER)
         ]
 
@@ -523,7 +517,7 @@ class TodoView:
             title=ft.Row(
                 controls=[
                     ft.Icon(ft.Icons.ARCHIVE_OUTLINED, size=18, color=PINK),
-                    ft.Text("Archive", size=15, color=TEXT_PRI, font_family="DOSSaemmul"),
+                    ft.Text(lang_store.t("archive"), size=15, color=TEXT_PRI, font_family="DOSSaemmul"),
                     ft.Container(expand=True),
                     ft.IconButton(
                         ft.Icons.CLOSE, icon_size=16, icon_color=TEXT_MUT,
@@ -563,6 +557,9 @@ class TodoView:
         })
         self.new_text.value  = ""
         self.due_field.value = ""
+        if self.due_text_ref.current:
+            self.due_text_ref.current.value = "MM-DD"
+            self.due_text_ref.current.update()
         self._refresh()
 
     # ── 화면 갱신 ────────────────────────────────────────────────────
@@ -607,26 +604,26 @@ class TodoView:
                     ft.Text(ref=self.stat_total_ref, value=str(total),
                             size=26, weight=ft.FontWeight.W_400,
                             color=TEXT_PRI, font_family="DOSSaemmul"),
-                    ft.Text("Total", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
+                    ft.Text(lang_store.t("stat_total"), size=13, color=TEXT_MUT, font_family="DOSSaemmul"),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Column(controls=[
                     ft.Text(ref=self.stat_done_ref, value=str(done),
                             size=26, weight=ft.FontWeight.W_400,
                             color=ACCENT, font_family="DOSSaemmul"),
-                    ft.Text("Done", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
+                    ft.Text(lang_store.t("stat_done"), size=13, color=TEXT_MUT, font_family="DOSSaemmul"),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Column(controls=[
                     ft.Text(ref=self.stat_remaining_ref, value=str(total - done),
                             size=26, weight=ft.FontWeight.W_400,
                             color=DANGER, font_family="DOSSaemmul"),
-                    ft.Text("Remaining", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
+                    ft.Text(lang_store.t("stat_remaining"), size=13, color=TEXT_MUT, font_family="DOSSaemmul"),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Container(expand=True),
                 ft.Column(controls=[
                     ft.Text(ref=self.stat_pct_ref, value=f"{pct}%",
                             size=26, weight=ft.FontWeight.W_400,
                             color=PINK, font_family="DOSSaemmul"),
-                    ft.Text("Completion", size=11, color=TEXT_MUT, font_family="DOSSaemmul"),
+                    ft.Text(lang_store.t("stat_completion"), size=13, color=TEXT_MUT, font_family="DOSSaemmul"),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             ],
             spacing=32,
@@ -639,7 +636,7 @@ class TodoView:
             )
 
         def _label(text):
-            return ft.Text(text, size=10, color=TEXT_MUT, font_family="DOSSaemmul")
+            return ft.Text(text, size=12, color=TEXT_MUT, font_family="DOSSaemmul")
 
         # ── 입력 카드 ────────────────────────────────────────────────
         add_card = ft.Container(
@@ -653,7 +650,7 @@ class TodoView:
                                 self.new_text,
                                 ft.Container(
                                     content=ft.Icon(ft.Icons.ARROW_UPWARD,
-                                                    size=14, color="#F0F9F8"),
+                                                    size=16, color="#F0F9F8"),
                                     bgcolor=ACCENT,
                                     border_radius=8,
                                     width=32, height=32,
@@ -678,7 +675,7 @@ class TodoView:
                             # 카테고리
                             ft.Column(
                                 controls=[
-                                    _label("Category"),
+                                    _label(lang_store.t("cat_label")),
                                     ft.Row(
                                         ref=self.cat_row_ref,
                                         controls=[self._cat_chip(c) for c in CATS],
@@ -691,7 +688,7 @@ class TodoView:
                             # 중요도
                             ft.Column(
                                 controls=[
-                                    _label("Priority"),
+                                    _label(lang_store.t("priority_label")),
                                     ft.Row(
                                         ref=self.priority_row_ref,
                                         controls=[self._priority_chip(p) for p in PRIORITIES],
@@ -704,13 +701,18 @@ class TodoView:
                             # 날짜
                             ft.Column(
                                 controls=[
-                                    _label("Due Date"),
+                                    _label(lang_store.t("due_date")),
                                     ft.Container(
                                         content=ft.Row(
                                             controls=[
                                                 ft.Icon(ft.Icons.CALENDAR_TODAY_OUTLINED,
-                                                        size=11, color=TEXT_SEC),
-                                                self.due_field,
+                                                        size=13, color=TEXT_SEC),
+                                                ft.Text(
+                                                    ref=self.due_text_ref,
+                                                    value="MM-DD",
+                                                    size=13, color=TEXT_PRI,
+                                                    font_family="DOSSaemmul",
+                                                ),
                                             ],
                                             spacing=4,
                                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -719,7 +721,6 @@ class TodoView:
                                         bgcolor=PINK,
                                         border_radius=6,
                                         padding=ft.padding.only(left=8, top=4, right=6, bottom=4),
-                                        tooltip="Click to pick a date",
                                     ),
                                 ],
                                 spacing=5,
@@ -752,10 +753,10 @@ class TodoView:
                         controls=[
                             ft.Column(
                                 controls=[
-                                    ft.Text("To-Do", size=26, weight=ft.FontWeight.W_400,
+                                    ft.Text(lang_store.t("todo_title"), size=26, weight=ft.FontWeight.W_400,
                                             color=TEXT_PRI, font_family="DOSSaemmul"),
-                                    ft.Text("Manage your tasks for today",
-                                            size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
+                                    ft.Text(lang_store.t("todo_sub"),
+                                            size=15, color=TEXT_SEC, font_family="DOSSaemmul"),
                                 ],
                                 spacing=2, expand=True,
                             ),
@@ -764,8 +765,8 @@ class TodoView:
                                 content=ft.Row(
                                     controls=[
                                         ft.Icon(ft.Icons.ARCHIVE_OUTLINED,
-                                                size=13, color=TEXT_SEC),
-                                        ft.Text("Archive", size=11, color=TEXT_SEC,
+                                                size=15, color=TEXT_SEC),
+                                        ft.Text(lang_store.t("archive"), size=13, color=TEXT_SEC,
                                                 font_family="DOSSaemmul"),
                                     ],
                                     spacing=5,

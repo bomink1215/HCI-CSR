@@ -175,5 +175,121 @@
       }
     ],
     "focus_sessions": 8
+  },
+  "2026-06-11": {
+    "posture_scores": [],
+    "focus_minutes": 14,
+    "synced_minutes": 14,
+    "history": [
+      {
+        "mode": "집중 세션",
+        "start": "12:21",
+        "end": "12:21",
+        "status": "Done"
+      },
+      {
+        "mode": "휴식 세션",
+        "start": "12:21",
+        "end": "12:21",
+        "status": "Done"
+      },
+      {
+        "mode": "집중 세션",
+        "start": "12:21",
+        "end": "12:22",
+        "status": "Done"
+      },
+      {
+        "mode": "focus_session",
+        "start": "13:22",
+        "end": "13:23",
+        "status": "done"
+      },
+      {
+        "mode": "break_session",
+        "start": "13:23",
+        "end": "13:23",
+        "status": "done"
+      },
+      {
+        "mode": "focus_session",
+        "start": "13:23",
+        "end": "13:23",
+        "status": "done"
+      },
+      {
+        "mode": "focus_session",
+        "start": "14:20",
+        "end": "14:20",
+        "status": "done"
+      },
+      {
+        "mode": "break_session",
+        "start": "14:20",
+        "end": "14:20",
+        "status": "done"
+      },
+      {
+        "mode": "focus_session",
+        "start": "14:20",
+        "end": "14:20",
+        "status": "done"
+      },
+      {
+        "mode": "focus_session",
+        "start": "14:24",
+        "end": "14:24",
+        "status": "done"
+      },
+      {
+        "mode": "break_session",
+        "start": "14:24",
+        "end": "14:24",
+        "status": "done"
+      },
+      {
+        "mode": "focus_session",
+        "start": "14:24",
+        "end": "14:24",
+        "status": "done"
+      },
+      {
+        "mode": "focus_session",
+        "start": "14:30",
+        "end": "14:31",
+        "status": "done"
+      },
+      {
+        "mode": "focus_session",
+        "start": "14:31",
+        "end": "14:32",
+        "status": "done"
+      },
+      {
+        "mode": "focus_session",
+        "start": "14:33",
+        "end": "14:33",
+        "status": "done"
+      },
+      {
+        "mode": "focus_session",
+        "start": "16:32",
+        "end": "16:32",
+        "status": "done"
+      },
+      {
+        "mode": "focus_session",
+        "start": "16:53",
+        "end": "16:53",
+        "status": "done"
+      },
+      {
+        "mode": "focus_session",
+        "start": "16:56",
+        "end": "16:57",
+        "status": "done"
+      }
+    ],
+    "focus_sessions": 14
   }
 }

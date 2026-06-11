@@ -1,4 +1,5 @@
 import flet as ft
+from utils import lang as lang_store
 import asyncio
 import subprocess
 import sys
@@ -171,7 +172,7 @@ TEXT_MUT  = "#9DA8B7"
 BORDER    = "#E2E6EC"
 
 MODE_COLORS  = {"focus": ACCENT,   "rest": PINK}
-MODE_LABELS  = {"focus": "Focus",  "rest": "Break"}
+MODE_LABELS  = {"focus": "focus_session",  "rest": "break_session"}  # lang keys
 
 
 def _completion_sound():
@@ -249,6 +250,7 @@ class PomodoroView:
         self.tab_refs        = {"focus": ft.Ref(), "rest": ft.Ref()}
         self.tab_text_refs   = {"focus": ft.Ref(), "rest": ft.Ref()}
         self.on_tick = None
+        self.on_sessions_update = None
 
         self.test_mode        = False
         self.focus_label_ref  = ft.Ref()
@@ -257,6 +259,16 @@ class PomodoroView:
         self.cycle_text_ref   = ft.Ref()
         self.session_dots_ref = ft.Ref()
         self.test_btn_ref     = ft.Ref()
+
+        # 언어 변경 시 Today's Log 레이블 갱신
+        lang_store.add_listener(self._on_lang_change)
+
+    def _on_lang_change(self):
+        try:
+            self._update_history()
+            self._update_dots()
+        except Exception:
+            pass
 
     def _fmt(self, secs: int) -> str:
         return f"{secs // 60:02d}:{secs % 60:02d}"
@@ -377,7 +389,7 @@ class PomodoroView:
 
         now_str   = time.strftime("%H:%M")
         start_str = self.session_start_str or "—"
-        entry = (MODE_LABELS[self.mode], start_str, now_str, "Done")
+        entry = (MODE_LABELS[self.mode], start_str, now_str, "done")
         self.history.append(entry)
         score_store.add_history_entry(*entry)   # 로그아웃해도 오늘치 유지
         self._update_history()
@@ -385,6 +397,11 @@ class PomodoroView:
         if self.mode == "focus":
             self.sessions_done += 1
             self._update_dots()
+            if self.on_sessions_update:
+                try:
+                    self.on_sessions_update(self.sessions_done, self.cycle_count)
+                except Exception:
+                    pass
             # Firestore에 stats 업데이트
             # 테스트 모드: 세션당 1분으로 기록 (랭킹 반영 테스트 가능)
             focus_mins = self.focus_minutes if not self.test_mode else 1
@@ -429,7 +446,7 @@ class PomodoroView:
             ).start()
 
         next_mode  = "rest" if self.mode == "focus" else "focus"
-        next_label = MODE_LABELS[next_mode]
+        next_label = lang_store.t(MODE_LABELS[next_mode])
 
         if self.mode == "focus":
             self._set_mode(next_mode)
@@ -469,11 +486,11 @@ class PomodoroView:
                 content=ft.Column(
                     controls=[
                         mascot_widget(56),
-                        ft.Text("Goal Achieved! 🎉", size=18, weight=ft.FontWeight.W_400,
+                        ft.Text(lang_store.t("goal_achieved"), size=18, weight=ft.FontWeight.W_400,
                                 color=ACCENT, font_family="DOSSaemmul",
                                 text_align=ft.TextAlign.CENTER),
-                        ft.Text(f"{self.cycle_count} cycles completed!",
-                                size=13, color=TEXT_SEC, font_family="DOSSaemmul",
+                        ft.Text(lang_store.t("cycles_complete_fmt").format(n=self.cycle_count),
+                                size=15, color=TEXT_SEC, font_family="DOSSaemmul",
                                 text_align=ft.TextAlign.CENTER),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -482,7 +499,7 @@ class PomodoroView:
                 padding=ft.padding.only(left=20, top=16, right=20, bottom=8),
             ),
             actions=[
-                ft.TextButton("Start Again", style=ft.ButtonStyle(color=ACCENT),
+                ft.TextButton(lang_store.t("start_again"), style=ft.ButtonStyle(color=ACCENT),
                               on_click=restart),
             ],
         )
@@ -505,11 +522,11 @@ class PomodoroView:
                 content=ft.Column(
                     controls=[
                         mascot_widget(56),
-                        ft.Text("Session Complete! 🎉", size=18, weight=ft.FontWeight.W_400,
+                        ft.Text(lang_store.t("session_complete_dlg"), size=18, weight=ft.FontWeight.W_400,
                                 color=ACCENT, font_family="DOSSaemmul",
                                 text_align=ft.TextAlign.CENTER),
-                        ft.Text(f"Next: {next_label} session",
-                                size=13, color=TEXT_SEC, font_family="DOSSaemmul",
+                        ft.Text(lang_store.t("next_session_fmt").format(label=next_label),
+                                size=15, color=TEXT_SEC, font_family="DOSSaemmul",
                                 text_align=ft.TextAlign.CENTER),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -518,7 +535,7 @@ class PomodoroView:
                 padding=ft.padding.only(left=20, top=16, right=20, bottom=8),
             ),
             actions=[
-                ft.TextButton("Start Next Session", style=ft.ButtonStyle(color=ACCENT),
+                ft.TextButton(lang_store.t("start_next_session"), style=ft.ButtonStyle(color=ACCENT),
                               on_click=go_next),
             ],
         )
@@ -538,7 +555,7 @@ class PomodoroView:
                 self.ring_ref.current.color = MODE_COLORS[self.mode]
                 self.ring_ref.current.update()
             if self.mode_label_ref.current:
-                self.mode_label_ref.current.value = MODE_LABELS[self.mode]
+                self.mode_label_ref.current.value = lang_store.t(MODE_LABELS[self.mode])
                 self.mode_label_ref.current.update()
         except Exception:
             pass
@@ -569,13 +586,13 @@ class PomodoroView:
             self.session_dots_ref.current.controls = self._dot_controls()
             self.session_dots_ref.current.update()
         if self.cycle_text_ref.current:
-            self.cycle_text_ref.current.value = f"Focus Progress ({self.sessions_done}/{self.cycle_count})"
+            self.cycle_text_ref.current.value = lang_store.t("focus_progress_fmt").format(done=self.sessions_done, goal=self.cycle_count)
             self.cycle_text_ref.current.update()
 
     def _update_history(self):
         if self.history_col_ref.current:
             self.history_col_ref.current.controls = [
-                ft.Text("Today's Log", size=14, weight=ft.FontWeight.W_400,
+                ft.Text(lang_store.t("today_log"), size=16, weight=ft.FontWeight.W_400,
                         color=TEXT_PRI, font_family="DOSSaemmul"),
                 ft.Container(height=10),
                 *self._history_rows(),
@@ -586,19 +603,34 @@ class PomodoroView:
                 pass
 
     def _history_rows(self) -> list:
+        # 구 번역 문자열 → 표준 키로 정규화
+        _TO_KEY = {
+            "focus_session":  "focus_session",
+            "break_session":  "break_session",
+            "집중 세션":       "focus_session",
+            "휴식 세션":       "break_session",
+            "Focus Session":  "focus_session",
+            "Break Session":  "break_session",
+            "Focus":          "focus_session",
+            "집중":            "focus_session",
+        }
+        _focus_keys = {"focus_session", "Focus Session", "집중 세션", "Focus", "집중"}
         rows = []
         for mode_l, start, end, _ in self.history:
-            color = ACCENT if mode_l == "Focus" else PINK
+            is_focus = mode_l in _focus_keys
+            color = ACCENT if is_focus else PINK
+            key   = _TO_KEY.get(mode_l, mode_l)
+            label = lang_store.t(key) if key in ("focus_session", "break_session") else mode_l
             rows.append(ft.Container(
                 content=ft.Row(
                     controls=[
                         ft.Container(width=8, height=8, bgcolor=color, border_radius=4),
-                        ft.Text(mode_l, size=13, color=TEXT_PRI,
+                        ft.Text(label, size=15, color=TEXT_PRI,
                                 font_family="DOSSaemmul", expand=True),
-                        ft.Text(f"{start} → {end}", size=11, color=TEXT_MUT,
+                        ft.Text(f"{start} → {end}", size=13, color=TEXT_MUT,
                                 font_family="DOSSaemmul"),
                         ft.Container(
-                            content=ft.Text("Done", size=10, color=ACCENT,
+                            content=ft.Text(lang_store.t("stat_done"), size=12, color=ACCENT,
                                             font_family="DOSSaemmul"),
                             bgcolor=ACCENT_LT, border_radius=6,
                             padding=ft.padding.only(left=8, top=3, right=8, bottom=3),
@@ -624,8 +656,8 @@ class PomodoroView:
                 ref=self.tab_refs[mode],
                 content=ft.Text(
                     ref=self.tab_text_refs[mode],
-                    value=MODE_LABELS[mode],
-                    size=12, weight=ft.FontWeight.W_400,
+                    value=lang_store.t(MODE_LABELS[mode]),
+                    size=14, weight=ft.FontWeight.W_400,
                     color=color if is_active else TEXT_MUT,
                     font_family="DOSSaemmul",
                 ),
@@ -675,8 +707,8 @@ class PomodoroView:
                                         ),
                                         ft.Text(
                                             ref=self.mode_label_ref,
-                                            value=MODE_LABELS[self.mode],
-                                            size=11, color=TEXT_MUT,
+                                            value=lang_store.t(MODE_LABELS[self.mode]),
+                                            size=13, color=TEXT_MUT,
                                             font_family="DOSSaemmul",
                                             text_align=ft.TextAlign.CENTER,
                                         ),
@@ -697,8 +729,8 @@ class PomodoroView:
                     ),
                     ft.Text(
                         ref=self.cycle_text_ref,
-                        value=f"Focus Progress ({self.sessions_done}/{self.cycle_count})",
-                        size=11, color=TEXT_MUT,
+                        value=lang_store.t("focus_progress_fmt").format(done=self.sessions_done, goal=self.cycle_count),
+                        size=13, color=TEXT_MUT,
                         font_family="DOSSaemmul",
                         text_align=ft.TextAlign.CENTER,
                     ),
@@ -755,7 +787,7 @@ class PomodoroView:
         def on_focus_change(e):
             self.focus_minutes = int(round(e.control.value / 5) * 5)
             if self.focus_label_ref.current:
-                self.focus_label_ref.current.value = f"Focus Time  {self.focus_minutes}min"
+                self.focus_label_ref.current.value = lang_store.t("focus_time_fmt").format(n=self.focus_minutes)
                 self.focus_label_ref.current.update()
             if self.mode == "focus" and not self.running:
                 self.remaining = self.focus_minutes * 60
@@ -766,7 +798,7 @@ class PomodoroView:
         def on_rest_change(e):
             self.rest_minutes = int(round(e.control.value / 5) * 5)
             if self.rest_label_ref.current:
-                self.rest_label_ref.current.value = f"Break Time  {self.rest_minutes}min"
+                self.rest_label_ref.current.value = lang_store.t("break_time_fmt").format(n=self.rest_minutes)
                 self.rest_label_ref.current.update()
             if self.mode == "rest" and not self.running:
                 self.remaining = self.rest_minutes * 60
@@ -776,11 +808,16 @@ class PomodoroView:
         def on_cycle_change(e):
             self.cycle_count = int(round(e.control.value))
             if self.cycle_label_ref.current:
-                self.cycle_label_ref.current.value = f"Goal Cycles  {self.cycle_count}"
+                self.cycle_label_ref.current.value = lang_store.t("goal_cycles_fmt").format(n=self.cycle_count)
                 self.cycle_label_ref.current.update()
             if self.sessions_done > self.cycle_count:
                 self.sessions_done = 0
             self._update_dots()
+            if self.on_sessions_update:
+                try:
+                    self.on_sessions_update(self.sessions_done, self.cycle_count)
+                except Exception:
+                    pass
             score_store.set_focus_goal(self.cycle_count, self.focus_minutes)
 
         def toggle_test_mode(e):
@@ -801,7 +838,7 @@ class PomodoroView:
                 self.test_btn_ref.current.bgcolor = DANGER if self.test_mode else BG_CARD2
                 self.test_btn_ref.current.border  = ft.border.all(1.5, DANGER if self.test_mode else BORDER)
                 lbl: ft.Text = self.test_btn_ref.current.content
-                lbl.value = "🧪 Test Mode ON  (10s × 2)" if self.test_mode else "🧪 Test Mode"
+                lbl.value = lang_store.t("test_mode_on") if self.test_mode else lang_store.t("test_mode")
                 lbl.color = "#F0F9F8" if self.test_mode else TEXT_MUT
                 self.test_btn_ref.current.update()
 
@@ -823,13 +860,13 @@ class PomodoroView:
         settings = card(
             ft.Column(
                 controls=[
-                    ft.Text("Settings", size=14, weight=ft.FontWeight.W_400,
+                    ft.Text(lang_store.t("settings"), size=16, weight=ft.FontWeight.W_400,
                             color=TEXT_PRI, font_family="DOSSaemmul"),
                     ft.Container(height=8),
                     ft.Column(controls=[
                         ft.Text(ref=self.focus_label_ref,
-                                value=f"Focus Time  {self.focus_minutes}min",
-                                size=12, color=TEXT_SEC, font_family="DOSSaemmul"),
+                                value=lang_store.t("focus_time_fmt").format(n=self.focus_minutes),
+                                size=14, color=TEXT_SEC, font_family="DOSSaemmul"),
                         ft.Slider(
                             min=5, max=60, value=self.focus_minutes,
                             divisions=11,
@@ -839,8 +876,8 @@ class PomodoroView:
                     ], spacing=2),
                     ft.Column(controls=[
                         ft.Text(ref=self.rest_label_ref,
-                                value=f"Break Time  {self.rest_minutes}min",
-                                size=12, color=TEXT_SEC, font_family="DOSSaemmul"),
+                                value=lang_store.t("break_time_fmt").format(n=self.rest_minutes),
+                                size=14, color=TEXT_SEC, font_family="DOSSaemmul"),
                         ft.Slider(
                             min=5, max=30, value=self.rest_minutes,
                             divisions=5,
@@ -850,8 +887,8 @@ class PomodoroView:
                     ], spacing=2),
                     ft.Column(controls=[
                         ft.Text(ref=self.cycle_label_ref,
-                                value=f"Goal Cycles  {self.cycle_count}",
-                                size=12, color=TEXT_SEC, font_family="DOSSaemmul"),
+                                value=lang_store.t("goal_cycles_fmt").format(n=self.cycle_count),
+                                size=14, color=TEXT_SEC, font_family="DOSSaemmul"),
                         ft.Slider(
                             min=1, max=8, value=self.cycle_count,
                             divisions=7,
@@ -864,7 +901,7 @@ class PomodoroView:
                     ft.Container(height=4),
                     ft.Container(
                         ref=self.test_btn_ref,
-                        content=ft.Text("🧪 Test Mode", size=12,
+                        content=ft.Text(lang_store.t("test_mode"), size=14,
                                         color=TEXT_MUT, font_family="DOSSaemmul",
                                         text_align=ft.TextAlign.CENTER),
                         bgcolor=BG_CARD2,
@@ -879,13 +916,13 @@ class PomodoroView:
                     ft.Divider(color=BORDER, height=1),
                     ft.Container(height=4),
                     ft.Row(controls=[
-                        ft.Text("Sound Alerts", size=12, color=TEXT_SEC,
+                        ft.Text(lang_store.t("sound_alerts"), size=14, color=TEXT_SEC,
                                 font_family="DOSSaemmul", expand=True),
                         ft.Switch(value=True, active_color=ACCENT, scale=0.8,
                                   on_change=toggle_sound),
                     ]),
                     ft.Row(controls=[
-                        ft.Text("Auto Start", size=12, color=TEXT_SEC,
+                        ft.Text(lang_store.t("auto_start"), size=14, color=TEXT_SEC,
                                 font_family="DOSSaemmul", expand=True),
                         ft.Switch(value=True, active_color=ACCENT, scale=0.8,
                                   on_change=toggle_auto),
@@ -903,7 +940,7 @@ class PomodoroView:
             ft.Column(
                 ref=self.history_col_ref,
                 controls=[
-                    ft.Text("Today's Log", size=14, weight=ft.FontWeight.W_400,
+                    ft.Text(lang_store.t("today_log"), size=16, weight=ft.FontWeight.W_400,
                             color=TEXT_PRI, font_family="DOSSaemmul"),
                     ft.Container(height=10),
                     *self._history_rows(),
@@ -933,10 +970,10 @@ class PomodoroView:
                 controls=[
                     ft.Column(
                         controls=[
-                            ft.Text("Pomodoro Timer", size=26, weight=ft.FontWeight.W_400,
+                            ft.Text(lang_store.t("pomo_title"), size=26, weight=ft.FontWeight.W_400,
                                     color=TEXT_PRI, font_family="DOSSaemmul"),
-                            ft.Text("Build a rhythm of focus and rest",
-                                    size=13, color=TEXT_SEC, font_family="DOSSaemmul"),
+                            ft.Text(lang_store.t("pomo_sub"),
+                                    size=15, color=TEXT_SEC, font_family="DOSSaemmul"),
                         ],
                         spacing=2,
                     ),

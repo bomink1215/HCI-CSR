@@ -30,7 +30,7 @@ _COMMIT    = f"https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databas
 _BATCH_GET = f"https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents:batchGet"
 _RUN_QUERY = f"https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents:runQuery"
 
-TIMEOUT = 6
+TIMEOUT = 10
 
 # ── 커넥션 풀 세션 — TCP/TLS 재사용으로 요청 속도 향상 ──────────────────
 _http = requests.Session()

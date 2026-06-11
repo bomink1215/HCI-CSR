@@ -2,6 +2,7 @@ import flet as ft
 import asyncio
 from components.ui import card, accent_btn, ghost_btn, mascot_widget
 from utils import firebase, session
+from utils import lang as lang_store
 
 BG_BASE   = "#F0F9F8"
 BG_CARD   = "#F4F6F8"
@@ -47,21 +48,21 @@ class ProfileView:
     def _check_nickname(self, e=None):
         nickname = (self.new_nick_ref.current.value or "").strip()
         if not nickname:
-            self._set_msg(self.nick_check_msg_ref, "Enter a nickname", ok=False); return
+            self._set_msg(self.nick_check_msg_ref, lang_store.t("err_enter_nick"), ok=False); return
         if nickname == self._user().get("nickname", ""):
-            self._set_msg(self.nick_check_msg_ref, "That's your current nickname", ok=False); return
+            self._set_msg(self.nick_check_msg_ref, lang_store.t("err_same_nick"), ok=False); return
 
         async def _work():
             try:
                 exists = await asyncio.to_thread(firebase.nickname_exists, nickname)
                 if exists:
                     self.nickname_verified = False
-                    self._set_msg(self.nick_check_msg_ref, "Nickname already taken", ok=False)
+                    self._set_msg(self.nick_check_msg_ref, lang_store.t("err_nick_taken"), ok=False)
                 else:
                     self.nickname_verified = True
-                    self._set_msg(self.nick_check_msg_ref, "Available ✓", ok=True)
+                    self._set_msg(self.nick_check_msg_ref, lang_store.t("ok_nick_available"), ok=True)
             except Exception:
-                self._set_msg(self.nick_check_msg_ref, "Network error", ok=False)
+                self._set_msg(self.nick_check_msg_ref, lang_store.t("no_record_today"), ok=False)
 
         self.page.run_task(_work)
 
@@ -82,16 +83,16 @@ class ProfileView:
             self.profile_nick_ref.current.value = new_nick
             self.profile_nick_ref.current.update()
         if self.current_nick_ref.current:
-            self.current_nick_ref.current.value = f"Current: {new_nick}"
+            self.current_nick_ref.current.value = lang_store.t("current_nick_fmt").format(nick=new_nick)
             self.current_nick_ref.current.update()
 
     # ── 닉네임 저장 ───────────────────────────────────────────────────
     def _save_nickname(self, e=None):
         new_nick = (self.new_nick_ref.current.value or "").strip()
         if not new_nick:
-            self._set_msg(self.nick_check_msg_ref, "Enter a nickname", ok=False); return
+            self._set_msg(self.nick_check_msg_ref, lang_store.t("err_enter_nick"), ok=False); return
         if not self.nickname_verified:
-            self._set_msg(self.nick_check_msg_ref, "Please check nickname availability first", ok=False); return
+            self._set_msg(self.nick_check_msg_ref, lang_store.t("err_check_nick"), ok=False); return
 
         user = self._user()
 
@@ -114,7 +115,7 @@ class ProfileView:
                     self.new_nick_ref.current.value = ""
                     self.new_nick_ref.current.update()
                 # check 메시지와 같은 위치에 성공 메시지 표시 후 3초 뒤 제거
-                self._set_msg(self.nick_check_msg_ref, "Nickname updated! ✓", ok=True)
+                self._set_msg(self.nick_check_msg_ref, lang_store.t("ok_nick_updated"), ok=True)
                 await asyncio.sleep(3)
                 self._set_msg(self.nick_check_msg_ref, "", ok=False)
 
@@ -127,22 +128,22 @@ class ProfileView:
         confirm_pw = self.confirm_pw_ref.current.value or ""
 
         if not curr_pw:
-            self._set_msg(self.pw_status_ref, "Enter your current password", ok=False); return
+            self._set_msg(self.pw_status_ref, lang_store.t("err_enter_curr_pw"), ok=False); return
         if not new_pw:
-            self._set_msg(self.pw_status_ref, "Enter a new password", ok=False); return
+            self._set_msg(self.pw_status_ref, lang_store.t("err_enter_new_pw"), ok=False); return
         if len(new_pw) < 6:
-            self._set_msg(self.pw_status_ref, "Password must be at least 6 characters", ok=False); return
+            self._set_msg(self.pw_status_ref, lang_store.t("err_pw_too_short"), ok=False); return
         if new_pw != confirm_pw:
-            self._set_msg(self.pw_status_ref, "Passwords do not match", ok=False); return
+            self._set_msg(self.pw_status_ref, lang_store.t("err_pw_no_match"), ok=False); return
         if curr_pw == new_pw:
-            self._set_msg(self.pw_status_ref, "New password must differ from current", ok=False); return
+            self._set_msg(self.pw_status_ref, lang_store.t("err_pw_same"), ok=False); return
 
         user = self._user()
 
         async def _work():
             verify = await asyncio.to_thread(firebase.sign_in, user["username"], curr_pw)
             if "error" in verify:
-                self._set_msg(self.pw_status_ref, "Current password is incorrect", ok=False)
+                self._set_msg(self.pw_status_ref, lang_store.t("err_curr_pw_wrong"), ok=False)
                 return
 
             # verify["id_token"]은 방금 sign_in으로 받은 최신 토큰 — 세션 토큰이 만료됐어도 동작
@@ -159,7 +160,7 @@ class ProfileView:
                         ref.current.value = ""
                         ref.current.update()
                 # 성공 메시지 3초 후 자동 제거
-                self._set_msg(self.pw_status_ref, "Password updated! ✓", ok=True)
+                self._set_msg(self.pw_status_ref, lang_store.t("ok_pw_updated"), ok=True)
                 await asyncio.sleep(3)
                 self._set_msg(self.pw_status_ref, "", ok=False)
 
@@ -176,8 +177,8 @@ class ProfileView:
         return ft.TextField(
             ref=ref,
             hint_text=hint,
-            hint_style=ft.TextStyle(color=TEXT_MUT, font_family=FONT, size=13),
-            text_style=ft.TextStyle(color=TEXT_PRI, font_family=FONT, size=13),
+            hint_style=ft.TextStyle(color=TEXT_MUT, font_family=FONT, size=15),
+            text_style=ft.TextStyle(color=TEXT_PRI, font_family=FONT, size=15),
             border_color=BORDER,
             focused_border_color=ACCENT,
             border_radius=10,
@@ -217,7 +218,7 @@ class ProfileView:
                                         value=nickname,
                                         size=18, color=TEXT_PRI, font_family=FONT,
                                     ),
-                                    ft.Text(f"@{username}", size=12,
+                                    ft.Text(f"@{username}", size=14,
                                             color=TEXT_MUT, font_family=FONT),
                                 ],
                                 spacing=2,
@@ -235,24 +236,24 @@ class ProfileView:
         nickname_card = card(
             ft.Column(
                 controls=[
-                    ft.Text("Change Nickname", size=14, color=TEXT_PRI, font_family=FONT),
+                    ft.Text(lang_store.t("change_nickname"), size=16, color=TEXT_PRI, font_family=FONT),
                     ft.Container(height=4),
                     ft.Text(
                         ref=self.current_nick_ref,
-                        value=f"Current: {nickname}",
-                        size=12, color=TEXT_MUT, font_family=FONT,
+                        value=lang_store.t("current_nick_fmt").format(nick=nickname),
+                        size=14, color=TEXT_MUT, font_family=FONT,
                     ),
                     ft.Container(height=12),
                     ft.Row(
                         controls=[
                             ft.Container(
-                                content=self._field(self.new_nick_ref, "New nickname",
+                                content=self._field(self.new_nick_ref, lang_store.t("new_nickname_hint"),
                                                     ft.Icons.BADGE_OUTLINED),
                                 expand=True,
                             ),
                             ft.Container(width=8),
                             ft.Container(
-                                content=ft.Text("Check", size=12, color="#F0F9F8",
+                                content=ft.Text(lang_store.t("check"), size=14, color="#F0F9F8",
                                                 font_family=FONT,
                                                 text_align=ft.TextAlign.CENTER),
                                 bgcolor=ACCENT, border_radius=10,
@@ -262,10 +263,10 @@ class ProfileView:
                         ],
                         vertical_alignment=ft.CrossAxisAlignment.START,
                     ),
-                    ft.Text(ref=self.nick_check_msg_ref, value="", size=11, font_family=FONT),
+                    ft.Text(ref=self.nick_check_msg_ref, value="", size=13, font_family=FONT),
                     ft.Container(height=8),
                     ft.Container(
-                        content=ft.Text("Save Nickname", size=13, color="#F0F9F8",
+                        content=ft.Text(lang_store.t("save_nickname_btn"), size=15, color="#F0F9F8",
                                         font_family=FONT, text_align=ft.TextAlign.CENTER),
                         bgcolor=ACCENT, border_radius=10,
                         padding=ft.padding.symmetric(horizontal=20, vertical=12),
@@ -284,20 +285,20 @@ class ProfileView:
         password_card = card(
             ft.Column(
                 controls=[
-                    ft.Text("Change Password", size=14, color=TEXT_PRI, font_family=FONT),
+                    ft.Text(lang_store.t("change_password"), size=16, color=TEXT_PRI, font_family=FONT),
                     ft.Container(height=12),
-                    self._field(self.curr_pw_ref, "Current password",
+                    self._field(self.curr_pw_ref, lang_store.t("curr_pw_hint"),
                                 ft.Icons.LOCK_OUTLINE, password=True),
                     ft.Container(height=8),
-                    self._field(self.new_pw_ref, "New password",
+                    self._field(self.new_pw_ref, lang_store.t("new_pw_hint"),
                                 ft.Icons.LOCK_OPEN_OUTLINED, password=True),
                     ft.Container(height=8),
-                    self._field(self.confirm_pw_ref, "Confirm new password",
+                    self._field(self.confirm_pw_ref, lang_store.t("confirm_pw_hint"),
                                 ft.Icons.LOCK_RESET, password=True),
-                    ft.Text(ref=self.pw_status_ref, value="", size=11, font_family=FONT),
+                    ft.Text(ref=self.pw_status_ref, value="", size=13, font_family=FONT),
                     ft.Container(height=8),
                     ft.Container(
-                        content=ft.Text("Save Password", size=13, color="#F0F9F8",
+                        content=ft.Text(lang_store.t("save_password_btn"), size=15, color="#F0F9F8",
                                         font_family=FONT, text_align=ft.TextAlign.CENTER),
                         bgcolor=ACCENT, border_radius=10,
                         padding=ft.padding.symmetric(horizontal=20, vertical=12),
@@ -314,7 +315,7 @@ class ProfileView:
 
         # ── 로그아웃 버튼 ────────────────────────────────────────────
         logout_btn = ft.Container(
-            content=ft.Text("Log Out", size=13, color=DANGER,
+            content=ft.Text(lang_store.t("log_out"), size=15, color=DANGER,
                             font_family=FONT, text_align=ft.TextAlign.CENTER),
             border=ft.border.all(1.5, DANGER),
             border_radius=10,
@@ -326,9 +327,9 @@ class ProfileView:
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text("My Profile", size=26, color=TEXT_PRI, font_family=FONT),
-                    ft.Text("Manage your account settings",
-                            size=13, color=TEXT_MUT, font_family=FONT),
+                    ft.Text(lang_store.t("profile_title"), size=26, color=TEXT_PRI, font_family=FONT),
+                    ft.Text(lang_store.t("profile_sub"),
+                            size=15, color=TEXT_MUT, font_family=FONT),
                     ft.Container(height=12),
                     ft.Row(
                         controls=[
