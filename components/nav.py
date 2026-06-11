@@ -176,17 +176,6 @@ class NavBar:
             expand=True,
         )
 
-        mascot = ft.Container(
-            content=ft.Image(
-                src="assets/mascot.png",
-                width=104,
-                height=104,
-                fit="contain",
-            ),
-            padding=ft.padding.only(bottom=8),
-            alignment=ft.Alignment(0, 0),
-        )
-
         def _lang_btn(code: str):
             is_active = lang_store.get() == code
             return ft.Container(
@@ -207,29 +196,44 @@ class NavBar:
                 alignment=ft.Alignment(0, 0),
             )
 
-        lang_toggle = ft.Container(
-            content=ft.Row(
-                controls=[_lang_btn("en"), _lang_btn("ko")],
-                spacing=4,
+        bottom_section = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Container(
+                        content=ft.Image(
+                            src="assets/mascot.png",
+                            width=56,
+                            height=56,
+                            fit="contain",
+                        ),
+                        alignment=ft.Alignment(0, 0),
+                    ),
+                    ft.Container(height=6),
+                    ft.Container(
+                        content=ft.Row(
+                            controls=[_lang_btn("en"), _lang_btn("ko")],
+                            spacing=4,
+                        ),
+                        padding=ft.padding.symmetric(horizontal=8),
+                    ),
+                    ft.Container(height=4),
+                    ft.Text(
+                        lang_store.t("nav_lang_label"),
+                        size=9,
+                        color=TEXT_MUT,
+                        font_family="DOSSaemmul",
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    ft.Container(height=14),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=0,
             ),
-            padding=ft.padding.only(left=8, right=8, bottom=4),
-        )
-
-        lang_label = ft.Container(
-            content=ft.Text(
-                lang_store.t("nav_lang_label"),
-                size=9,
-                color=TEXT_MUT,
-                font_family="DOSSaemmul",
-                text_align=ft.TextAlign.CENTER,
-            ),
-            padding=ft.padding.only(bottom=10),
-            alignment=ft.Alignment(0, 0),
         )
 
         return ft.Container(
             content=ft.Column(
-                controls=[logo, nav_buttons, mascot, lang_toggle, lang_label],
+                controls=[logo, nav_buttons, bottom_section],
                 spacing=0,
             ),
             width=76,

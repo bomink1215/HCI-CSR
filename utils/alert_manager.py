@@ -1,12 +1,15 @@
 import threading
 import time
 import os
+from utils import lang
 
 _lock          = threading.Lock()
 _last_score    = [100]
 _monitoring    = [False]
 _snoozed_until = [0.0]
 _posture_type  = ["good"]
+_daemon_started = False
+_popup_lock    = threading.Lock()
 
 ALERT_THRESHOLD = 80
 ALERT_INTERVAL  = 60
@@ -26,26 +29,25 @@ POSTURE_IMAGES: dict[str, str] = {
     POSTURE_TILT:    os.path.join(_BASE_DIR, "assets", "alert_shoulder_tilt.png"),
 }
 
-POSTURE_META: dict[str, dict] = {
-    POSTURE_ROUNDED: {
-        "accent":   "#FFB347",
-        "emoji":    "🪑",
-        "headline": "Hunched Posture Detected!",
-        "detail":   "Straighten your back and gently\npull your shoulders back.",
-    },
-    POSTURE_SLOUCH: {
-        "accent":   "#FF5C5C",
-        "emoji":    "⬇️",
-        "headline": "Slouching Detected!",
-        "detail":   "Slide your hips to the back of\nthe chair and sit up tall.",
-    },
-    POSTURE_TILT: {
-        "accent":   "#9B8FFF",
-        "emoji":    "⚖️",
-        "headline": "Shoulder Imbalance Detected!",
-        "detail":   "Level your shoulders and\nsit in a balanced position.",
-    },
+_POSTURE_META_BASE: dict[str, dict] = {
+    POSTURE_ROUNDED: {"accent": "#FFB347", "emoji": "🪑",
+                      "headline_key": "alert_rounded_headline", "detail_key": "alert_rounded_detail"},
+    POSTURE_SLOUCH:  {"accent": "#FF5C5C", "emoji": "⬇️",
+                      "headline_key": "alert_slouch_headline",  "detail_key": "alert_slouch_detail"},
+    POSTURE_TILT:    {"accent": "#9B8FFF", "emoji": "⚖️",
+                      "headline_key": "alert_tilt_headline",    "detail_key": "alert_tilt_detail"},
 }
+
+def get_posture_meta(posture_type: str) -> dict:
+    base = _POSTURE_META_BASE.get(posture_type, _POSTURE_META_BASE[POSTURE_ROUNDED])
+    return {
+        "accent":   base["accent"],
+        "emoji":    base["emoji"],
+        "headline": lang.t(base["headline_key"]),
+        "detail":   lang.t(base["detail_key"]),
+    }
+
+POSTURE_META = _POSTURE_META_BASE  # 하위 호환 (직접 접근하는 곳 없도록 대체)
 
 
 def set_score(score: int):
@@ -82,7 +84,7 @@ def _show_popup(score: int, posture_type: str):
         import tkinter as tk
         from PIL import Image, ImageTk
 
-        meta   = POSTURE_META.get(posture_type, POSTURE_META[POSTURE_ROUNDED])
+        meta   = get_posture_meta(posture_type)
         accent = meta["accent"]
 
         img_path = POSTURE_IMAGES.get(posture_type, "")
@@ -135,7 +137,7 @@ def _show_popup(score: int, posture_type: str):
         tk.Label(top_row, text=meta["headline"], bg="#FFFFFF",
                  fg="#1A1D23", font=("Segoe UI", 12, "bold")).pack(side="left")
 
-        tk.Label(content, text=f"  Posture Score: {score}  ",
+        tk.Label(content, text=f"  {lang.t('alert_score_label')}: {score}  ",
                  bg=accent, fg="#FFFFFF",
                  font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(3, 10))
 
@@ -153,13 +155,13 @@ def _show_popup(score: int, posture_type: str):
             except Exception:
                 pass
 
-        tk.Button(btn_row, text="✓  Fix Now",
+        tk.Button(btn_row, text=lang.t("alert_fix_now"),
                   bg=accent, fg="#FFFFFF", font=("Segoe UI", 9, "bold"),
                   relief="flat", bd=0, padx=12, pady=5, cursor="hand2",
                   activebackground=accent,
                   command=slide_out).pack(side="left", padx=(0, 8))
 
-        tk.Button(btn_row, text="🕐  Remind in 5 min",
+        tk.Button(btn_row, text=lang.t("alert_remind"),
                   bg="#F4F6F8", fg="#5A6375", font=("Segoe UI", 9),
                   relief="flat", bd=0, padx=12, pady=5, cursor="hand2",
                   activebackground="#F4F6F8",
@@ -191,7 +193,7 @@ def _show_popup(score: int, posture_type: str):
 def _show_popup_simple(score: int, posture_type: str):
     try:
         import tkinter as tk
-        meta   = POSTURE_META.get(posture_type, POSTURE_META[POSTURE_ROUNDED])
+        meta   = get_posture_meta(posture_type)
         accent = meta["accent"]
         W, H   = 340, 190
 
@@ -220,7 +222,7 @@ def _show_popup_simple(score: int, posture_type: str):
                  font=("Segoe UI Emoji", 16)).pack(side="left", padx=(0,8))
         tk.Label(top_row, text=meta["headline"], bg="#FFFFFF",
                  fg="#1A1D23", font=("Segoe UI", 13, "bold")).pack(side="left")
-        tk.Label(content, text=f"  Posture Score: {score}  ",
+        tk.Label(content, text=f"  {lang.t('alert_score_label')}: {score}  ",
                  bg=accent, fg="#FFFFFF",
                  font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(6,0))
 
@@ -237,11 +239,11 @@ def _show_popup_simple(score: int, posture_type: str):
             except Exception:
                 pass
 
-        tk.Button(btn_row, text="✓  Fix Now", bg=accent, fg="#FFFFFF",
+        tk.Button(btn_row, text=lang.t("alert_fix_now"), bg=accent, fg="#FFFFFF",
                   font=("Segoe UI", 9, "bold"), relief="flat", bd=0,
                   padx=12, pady=5, cursor="hand2", activebackground=accent,
                   command=slide_out).pack(side="left", padx=(0,8))
-        tk.Button(btn_row, text="🕐  Remind in 5 min",
+        tk.Button(btn_row, text=lang.t("alert_remind"),
                   bg="#F4F6F8", fg="#5A6375", font=("Segoe UI", 9),
                   relief="flat", bd=0, padx=12, pady=5, cursor="hand2",
                   activebackground="#F4F6F8",
@@ -268,22 +270,28 @@ def _show_popup_simple(score: int, posture_type: str):
 
 def _show_popup_subprocess(score: int, posture_type: str):
     import sys, subprocess
-    meta     = POSTURE_META.get(posture_type, POSTURE_META[POSTURE_ROUNDED])
-    accent   = meta["accent"]
-    headline = meta["headline"]
-    emoji    = meta["emoji"]
-    img_path = POSTURE_IMAGES.get(posture_type, "").replace("\\", "/")
+    meta      = get_posture_meta(posture_type)
+    accent    = meta["accent"]
+    headline  = meta["headline"]
+    emoji     = meta["emoji"]
+    fix_now   = lang.t("alert_fix_now")
+    remind    = lang.t("alert_remind")
+    score_lbl = lang.t("alert_score_label")
+    img_path  = POSTURE_IMAGES.get(posture_type, "").replace("\\", "/")
 
     script = f"""
 import tkinter as tk
 from PIL import Image, ImageTk
 import os
 
-accent   = "{accent}"
-headline = "{headline}"
-emoji    = "{emoji}"
-score    = {score}
-img_path = "{img_path}"
+accent    = "{accent}"
+headline  = "{headline}"
+emoji     = "{emoji}"
+fix_now   = {repr(fix_now)}
+remind    = {repr(remind)}
+score_lbl = {repr(score_lbl)}
+score     = {score}
+img_path  = "{img_path}"
 
 IMG_W, IMG_H = 320, 160
 W = 340
@@ -324,7 +332,7 @@ tk.Label(content, text="ZZOOK", bg="#FFFFFF", fg="#9DA8B7", font=("Segoe UI", 8)
 top_row = tk.Frame(content, bg="#FFFFFF"); top_row.pack(anchor="w", pady=(1,0))
 tk.Label(top_row, text=emoji, bg="#FFFFFF", font=("Segoe UI Emoji", 15)).pack(side="left", padx=(0,6))
 tk.Label(top_row, text=headline, bg="#FFFFFF", fg="#1A1D23", font=("Segoe UI", 12, "bold")).pack(side="left")
-tk.Label(content, text=f"  Posture Score: {{score}}  ", bg=accent, fg="#FFFFFF", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(3,10))
+tk.Label(content, text=f"  {{score_lbl}}: {{score}}  ", bg=accent, fg="#FFFFFF", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(3,10))
 
 def slide_out(step=0):
     if step > 15:
@@ -338,7 +346,7 @@ def slide_out(step=0):
         pass
 
 btn_row = tk.Frame(content, bg="#FFFFFF"); btn_row.pack(anchor="w", pady=(0,6))
-tk.Button(btn_row, text="Fix Now", bg=accent, fg="#FFFFFF", font=("Segoe UI", 9, "bold"), relief="flat", bd=0, padx=12, pady=5, command=slide_out).pack(side="left", padx=(0,8))
+tk.Button(btn_row, text=fix_now, bg=accent, fg="#FFFFFF", font=("Segoe UI", 9, "bold"), relief="flat", bd=0, padx=12, pady=5, command=slide_out).pack(side="left", padx=(0,8))
 
 def slide_in(step=0):
     if step > 20:
@@ -361,6 +369,11 @@ root.mainloop()
         pass
 
 def start_alert_daemon():
+    global _daemon_started
+    if _daemon_started:
+        return
+    _daemon_started = True
+
     def _loop():
         bad_count  = 0
         last_alert = 0.0
@@ -380,10 +393,14 @@ def start_alert_daemon():
             cooled  = (now - last_alert) >= ALERT_INTERVAL
             if bad_count >= BAD_COUNT_LIMIT and not snoozed and cooled \
                     and ptype != POSTURE_OK:
-                last_alert = now
-                bad_count  = 0
-                threading.Thread(
-                    target=_show_popup_subprocess, args=(score, ptype), daemon=True
-                ).start()
+                if _popup_lock.acquire(blocking=False):
+                    last_alert = now
+                    bad_count  = 0
+                    def _fire(s=score, p=ptype):
+                        try:
+                            _show_popup_subprocess(s, p)
+                        finally:
+                            _popup_lock.release()
+                    threading.Thread(target=_fire, daemon=True).start()
 
     threading.Thread(target=_loop, daemon=True).start()

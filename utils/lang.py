@@ -263,6 +263,40 @@ _STRINGS: dict[str, dict[str, str]] = {
         # ── Common ───────────────────────────────────────────────────
         "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu",
         "fri": "Fri", "sat": "Sat", "sun": "Sun",
+        # ── Posture issues (Flet UI) ─────────────────────────────────
+        "issue_slouch":       "Posture collapsing - push hips into chair",
+        "issue_rounded":      "Back rounded - pull shoulders back",
+        "issue_tilt_left":    "Shoulders tilted - raise left shoulder",
+        "issue_tilt_right":   "Shoulders tilted - raise right shoulder",
+        "issue_tilt_one":     "Shoulders tilted - raise one shoulder",
+        "issue_good":         "Great posture! Keep it up :)",
+        "waiting_calib":      "Waiting for calibration...",
+        "status_sit_up":      "Sit up straight...",
+        "status_calib_fail":  "Calibration failed - face not detected",
+        "status_analyzing":   "Analyzing... (check the separate window)",
+        "status_click_start": "Click Start Monitoring to begin",
+        # ── cv2 calibration ──────────────────────────────────────────
+        "cv2_sit_up":     "SIT UP STRAIGHT",
+        "cv2_calib_in":   "Calibrating in...",
+        "cv2_hold_still": "Hold still - recording baseline",
+        "cv2_no_face":    "Face not detected!",
+        # ── Alert popup ──────────────────────────────────────────────
+        "alert_rounded_headline": "Hunched Posture Detected!",
+        "alert_rounded_detail":   "Straighten your back and gently\npull your shoulders back.",
+        "alert_slouch_headline":  "Slouching Detected!",
+        "alert_slouch_detail":    "Slide your hips to the back of\nthe chair and sit up tall.",
+        "alert_tilt_headline":    "Shoulder Imbalance Detected!",
+        "alert_tilt_detail":      "Level your shoulders and\nsit in a balanced position.",
+        "alert_score_label":      "Posture Score",
+        "alert_fix_now":          "✓  Fix Now",
+        "alert_remind":           "🕐  Remind in 5 min",
+        # ── Pomodoro toast notifications ─────────────────────────────
+        "pomo_goal_title":        "ZZOOK ✅",
+        "pomo_goal_msg":          "Goal achieved! {n} cycles complete. Great work!",
+        "pomo_focus_done_title":  "ZZOOK 💪",
+        "pomo_focus_done_msg":    "Focus session complete! Time for a break.",
+        "pomo_break_done_title":  "ZZOOK ⏰",
+        "pomo_break_done_msg":    "Break over! Starting next focus session.",
     },
     "ko": {
         # ── Nav ──────────────────────────────────────────────────────
@@ -451,6 +485,40 @@ _STRINGS: dict[str, dict[str, str]] = {
         # ── Common ───────────────────────────────────────────────────
         "mon": "월", "tue": "화", "wed": "수", "thu": "목",
         "fri": "금", "sat": "토", "sun": "일",
+        # ── Posture issues (Flet UI) ─────────────────────────────────
+        "issue_slouch":       "자세 무너짐 - 엉덩이를 등받이에 밀착하세요",
+        "issue_rounded":      "등 굽음 - 어깨를 뒤로 당겨주세요",
+        "issue_tilt_left":    "어깨 기울어짐 - 왼쪽 어깨를 올리세요",
+        "issue_tilt_right":   "어깨 기울어짐 - 오른쪽 어깨를 올리세요",
+        "issue_tilt_one":     "어깨 기울어짐 - 어깨를 수평으로 맞추세요",
+        "issue_good":         "자세가 좋아요! 계속 유지하세요 :)",
+        "waiting_calib":      "캘리브레이션 대기 중...",
+        "status_sit_up":      "바른 자세로 앉으세요...",
+        "status_calib_fail":  "캘리브레이션 실패 - 얼굴이 감지되지 않아요",
+        "status_analyzing":   "분석 중... (카메라 창을 확인하세요)",
+        "status_click_start": "모니터링 시작 버튼을 눌러주세요",
+        # ── cv2 calibration ──────────────────────────────────────────
+        "cv2_sit_up":     "바른 자세로 앉으세요",
+        "cv2_calib_in":   "캘리브레이션 시작...",
+        "cv2_hold_still": "자세 유지 - 기준 자세 기록 중",
+        "cv2_no_face":    "얼굴이 감지되지 않아요!",
+        # ── Alert popup ──────────────────────────────────────────────
+        "alert_rounded_headline": "등 굽음이 감지되었어요!",
+        "alert_rounded_detail":   "등을 펴고 어깨를\n부드럽게 뒤로 당겨주세요.",
+        "alert_slouch_headline":  "자세 무너짐이 감지되었어요!",
+        "alert_slouch_detail":    "엉덩이를 등받이에 밀착하고\n허리를 곧게 펴주세요.",
+        "alert_tilt_headline":    "어깨 불균형이 감지되었어요!",
+        "alert_tilt_detail":      "어깨를 수평으로 맞추고\n균형 잡힌 자세로 앉으세요.",
+        "alert_score_label":      "자세 점수",
+        "alert_fix_now":          "✓  지금 교정",
+        "alert_remind":           "🕐  5분 후 알림",
+        # ── Pomodoro toast notifications ─────────────────────────────
+        "pomo_goal_title":        "ZZOOK ✅",
+        "pomo_goal_msg":          "목표 달성! {n}사이클 완료. 수고했어요!",
+        "pomo_focus_done_title":  "ZZOOK 💪",
+        "pomo_focus_done_msg":    "집중 세션 완료! 휴식 시간이에요.",
+        "pomo_break_done_title":  "ZZOOK ⏰",
+        "pomo_break_done_msg":    "휴식 끝! 다음 집중 세션을 시작해요.",
     },
 }
 

@@ -426,7 +426,10 @@ class PomodoroView:
         if self.mode == "focus" and self.sessions_done >= self.cycle_count:
             threading.Thread(
                 target=_notify,
-                args=("ZZOOK ✅", f"Goal achieved! {self.cycle_count} cycles complete. Great work!"),
+                args=(
+                    lang_store.t("pomo_goal_title"),
+                    lang_store.t("pomo_goal_msg").format(n=self.cycle_count),
+                ),
                 daemon=True,
             ).start()
             self._show_all_done_dialog()
@@ -435,13 +438,13 @@ class PomodoroView:
         if self.mode == "focus":
             threading.Thread(
                 target=_notify,
-                args=("ZZOOK 💪", "Focus session complete! Time for a break."),
+                args=(lang_store.t("pomo_focus_done_title"), lang_store.t("pomo_focus_done_msg")),
                 daemon=True,
             ).start()
         else:
             threading.Thread(
                 target=_notify,
-                args=("ZZOOK ⏰", "Break over! Starting next focus session."),
+                args=(lang_store.t("pomo_break_done_title"), lang_store.t("pomo_break_done_msg")),
                 daemon=True,
             ).start()
 

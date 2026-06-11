@@ -32,6 +32,38 @@ def _find_model():
             return p
     return None
 
+_FONT_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "assets", "fonts", "DOSSaemmul.ttf"
+)
+_pil_font_cache: dict = {}
+
+def _put_text(frame, text: str, pos: tuple, font_size: int, color_bgr: tuple):
+    """cv2.putText 대체: 비ASCII(한글 등) 포함 시 PIL로 렌더링."""
+    if all(ord(c) < 128 for c in text):
+        import cv2 as _c
+        _c.putText(frame, text, pos,
+                   _c.FONT_HERSHEY_SIMPLEX, font_size / 26,
+                   color_bgr, 1, _c.LINE_AA)
+        return frame
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        import numpy as np, cv2 as _c
+        if font_size not in _pil_font_cache:
+            try:
+                _pil_font_cache[font_size] = ImageFont.truetype(_FONT_PATH, font_size)
+            except Exception:
+                _pil_font_cache[font_size] = ImageFont.load_default()
+        pil = Image.fromarray(_c.cvtColor(frame, _c.COLOR_BGR2RGB))
+        draw = ImageDraw.Draw(pil)
+        r, g, b = color_bgr[2], color_bgr[1], color_bgr[0]
+        draw.text(pos, text, font=_pil_font_cache[font_size], fill=(r, g, b))
+        result = _c.cvtColor(np.array(pil), _c.COLOR_RGB2BGR)
+        frame[:] = result
+    except Exception:
+        pass
+    return frame
+
+
 POSTURE_ROUNDED = "rounded_back"
 POSTURE_SLOUCH  = "slouch"
 POSTURE_TILT    = "shoulder_tilt"
@@ -75,14 +107,14 @@ def _extract_features(landmarks):
 
     if sh_vis > 0.4:
         feat["tilt_raw"]  = abs(l_sh.y - r_sh.y) / face_w
-        feat["tilt_side"] = "Left" if l_sh.y > r_sh.y else "Right"
+        feat["tilt_side"] = "Right" if l_sh.y > r_sh.y else "Left"
 
     return feat
 
 
 def _calc_score(feat: dict) -> tuple:
     if not _calib["done"]:
-        return 100, ["Waiting for calibration..."], POSTURE_OK, {}, {}
+        return 100, [lang_store.t("waiting_calib")], POSTURE_OK, {}, {}
 
     score  = 100
     issues = []
@@ -108,7 +140,7 @@ def _calc_score(feat: dict) -> tuple:
         d = min(int(excess * 350), 45)
         score -= d
         ded[POSTURE_SLOUCH] += d
-        issues.append("Posture collapsing - push hips into chair")
+        issues.append(lang_store.t("issue_slouch"))
 
     ROUNDED_MARGIN = 0.10
     if zoom > ROUNDED_MARGIN and ded[POSTURE_SLOUCH] == 0:
@@ -116,7 +148,7 @@ def _calc_score(feat: dict) -> tuple:
         d = min(int(excess * 280), 40)
         score -= d
         ded[POSTURE_ROUNDED] += d
-        issues.append("Back rounded - pull shoulders back")
+        issues.append(lang_store.t("issue_rounded"))
 
     TILT_MARGIN = 0.12
     if base_tilt is not None and feat.get("tilt_raw") is not None:
@@ -127,14 +159,15 @@ def _calc_score(feat: dict) -> tuple:
             score -= d
             ded[POSTURE_TILT] += d
             side = feat.get("tilt_side", "One")
-            issues.append(f"Shoulders tilted - raise {side.lower()} shoulder")
+            key = f"issue_tilt_{side.lower()}" if side.lower() in ("left", "right") else "issue_tilt_one"
+            issues.append(lang_store.t(key))
 
     score = max(0, min(100, score))
     posture_type = POSTURE_OK
     if any(v > 0 for v in ded.values()):
         posture_type = max(ded, key=ded.get)
     if not issues:
-        issues.append("Great posture! Keep it up :)")
+        issues.append(lang_store.t("issue_good"))
 
     dbg["ded"] = dict(ded)
     return score, issues, posture_type, ded, dbg
@@ -158,6 +191,8 @@ class PostureView:
         self.toggle_btn_ref = ft.Ref()
         self.calib_card_ref = ft.Ref()
 
+        lang_store.add_listener(self._on_lang_change)
+
     def _run_calibration(self, landmarker, cap, mp, win_name, start_time):
         import cv2
         COUNTDOWN = 3
@@ -170,7 +205,7 @@ class PostureView:
         samples_face_w = []
         samples_tilt   = []
 
-        self._set_status("Sit up straight...")
+        self._set_status(lang_store.t("status_sit_up"))
 
         while True:
             ret, frame = cap.read()
@@ -210,12 +245,12 @@ class PostureView:
 
             if phase == "countdown":
                 remaining = int(COUNTDOWN - elapsed) + 1
-                cv2.putText(frame, "SIT UP STRAIGHT",
-                            (w//2 - 160, h//2 - 60),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1.1, (0,201,167), 2, cv2.LINE_AA)
-                cv2.putText(frame, "Calibrating in...",
-                            (w//2 - 110, h//2),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (90,99,117), 1, cv2.LINE_AA)
+                txt_sit   = lang_store.t("cv2_sit_up")
+                txt_calib = lang_store.t("cv2_calib_in")
+                sit_x  = max(14, w//2 - len(txt_sit) * 10)
+                cal_x  = max(14, w//2 - len(txt_calib) * 7)
+                _put_text(frame, txt_sit,   (sit_x, h//2 - 60), 28, (0,201,167))
+                _put_text(frame, txt_calib, (cal_x, h//2),      20, (90,99,117))
                 cv2.putText(frame, str(remaining),
                             (w//2 - 22, h//2 + 80),
                             cv2.FONT_HERSHEY_SIMPLEX, 3.0, (0,201,167), 4, cv2.LINE_AA)
@@ -227,17 +262,16 @@ class PostureView:
             elif phase == "collect":
                 remaining = COLLECT - elapsed
                 bar_w = int((elapsed / COLLECT) * (w - 60))
-                cv2.putText(frame, "Hold still - recording baseline",
-                            (w//2 - 200, h//2 - 20),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,201,167), 2, cv2.LINE_AA)
+                txt_hold = lang_store.t("cv2_hold_still")
+                hold_x   = max(14, w//2 - len(txt_hold) * 8)
+                _put_text(frame, txt_hold, (hold_x, h//2 - 20), 22, (0,201,167))
                 cv2.rectangle(frame, (30, h//2 + 20), (w-30, h//2 + 44), (220,224,230), -1)
                 cv2.rectangle(frame, (30, h//2 + 20), (30 + bar_w, h//2 + 44), (0,201,167), -1)
 
-                no_face_msg = "" if feat else "Face not detected!"
-                if no_face_msg:
-                    cv2.putText(frame, no_face_msg,
-                                (w//2 - 100, h//2 + 80),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (92,92,255), 2, cv2.LINE_AA)
+                if not feat:
+                    txt_nf  = lang_store.t("cv2_no_face")
+                    nf_x    = max(14, w//2 - len(txt_nf) * 7)
+                    _put_text(frame, txt_nf, (nf_x, h//2 + 80), 20, (92,92,255))
 
                 if feat:
                     samples_ear_y.append(feat["ear_y"])
@@ -254,7 +288,7 @@ class PostureView:
                 return False
 
         if len(samples_face_w) < 5:
-            self._set_status("❌ Calibration failed — face not detected")
+            self._set_status("❌ " + lang_store.t("status_calib_fail"))
             return False
 
         _calib["ear_y"]    = statistics.median(samples_ear_y)
@@ -263,7 +297,7 @@ class PostureView:
         _calib["done"]        = True
 
         self._set_calib_done(True)
-        self._set_status("Analyzing... (check the separate window)")
+        self._set_status(lang_store.t("status_analyzing"))
         return True
 
     def _camera_worker(self):
@@ -319,6 +353,9 @@ class PostureView:
         start_time = time.time()
         _cv2.namedWindow(win_name, _cv2.WINDOW_NORMAL)
         _cv2.resizeWindow(win_name, 800, 600)
+        _cv2.setWindowProperty(win_name, _cv2.WND_PROP_TOPMOST, 1)
+        _cv2.waitKey(1)  # 첫 프레임 표시 후 topmost 해제
+        _cv2.setWindowProperty(win_name, _cv2.WND_PROP_TOPMOST, 0)
 
         reset_calibration()
         ok = self._run_calibration(landmarker, cap, mp, win_name, start_time)
@@ -379,13 +416,12 @@ class PostureView:
                             _cv2.circle(frame, (px, py), 4, (0,201,167), -1, _cv2.LINE_AA)
 
                 color_bgr = (0,201,167) if score>=70 else (71,179,255) if score>=50 else (92,92,255)
-                _cv2.rectangle(frame, (0,0), (w,60), (244,246,248), -1)
+                _cv2.rectangle(frame, (0,0), (w,76), (244,246,248), -1)
                 _cv2.putText(frame, f"Score: {score}",
-                             (14, 36), _cv2.FONT_HERSHEY_SIMPLEX, 1.0,
+                             (14, 38), _cv2.FONT_HERSHEY_SIMPLEX, 1.0,
                              color_bgr, 2, _cv2.LINE_AA)
-                _cv2.putText(frame, issues[0] if issues else "",
-                             (14, 56), _cv2.FONT_HERSHEY_SIMPLEX, 0.55,
-                             (90,99,117), 1, _cv2.LINE_AA)
+                _put_text(frame, issues[0] if issues else "",
+                          (14, 56), 16, (90, 99, 117))
 
                 fps_count += 1
                 elapsed = time.time() - fps_timer
@@ -531,6 +567,9 @@ class PostureView:
             pass
 
     def _toggle(self, e):
+        # \uc774\ubbf8 \ubaa8\ub2c8\ud130\ub9c1 \uc911\uc774\uba74 \uc911\ubcf5 \uc2dc\uc791 \ubc29\uc9c0
+        if not self.monitoring and self._thread and self._thread.is_alive():
+            return
         self.monitoring = not self.monitoring
         btn: ft.Container = e.control
         row: ft.Row = btn.content
@@ -546,6 +585,32 @@ class PostureView:
             row.controls[1].value = lang_store.t("start_monitoring")
             btn.bgcolor = ACCENT
             btn.update()
+
+    def _on_lang_change(self):
+        """언어 변경 시 현재 monitoring 상태를 보존하며 UI 텍스트만 갱신."""
+        async def _do():
+            try:
+                btn = self.toggle_btn_ref.current
+                if btn:
+                    row: ft.Row = btn.content
+                    if self.monitoring:
+                        row.controls[1].value = lang_store.t("stop_monitoring")
+                        btn.bgcolor = DANGER
+                    else:
+                        row.controls[1].value = lang_store.t("start_monitoring")
+                        btn.bgcolor = ACCENT
+                    btn.update()
+                if self.cam_label_ref.current:
+                    self.cam_label_ref.current.value = (
+                        lang_store.t("cam_on") if self.monitoring else lang_store.t("cam_off")
+                    )
+                    self.cam_label_ref.current.update()
+                if self.status_ref.current and not self.monitoring:
+                    self.status_ref.current.value = lang_store.t("click_to_begin")
+                    self.status_ref.current.update()
+            except Exception:
+                pass
+        self.page.run_task(_do)
 
     def _score_ring(self) -> ft.Container:
         return ft.Container(
@@ -644,15 +709,22 @@ class PostureView:
                         ref=self.toggle_btn_ref,
                         content=ft.Row(
                             controls=[
-                                ft.Icon(ft.Icons.PLAY_ARROW, size=18, color="#F0F9F8"),
-                                ft.Text(lang_store.t("start_monitoring"), size=16,
-                                        weight=ft.FontWeight.W_400,
-                                        color="#F0F9F8", font_family="DOSSaemmul"),
+                                ft.Icon(
+                                    ft.Icons.STOP if self.monitoring else ft.Icons.PLAY_ARROW,
+                                    size=18, color="#F0F9F8",
+                                ),
+                                ft.Text(
+                                    lang_store.t("stop_monitoring") if self.monitoring
+                                    else lang_store.t("start_monitoring"),
+                                    size=16, weight=ft.FontWeight.W_400,
+                                    color="#F0F9F8", font_family="DOSSaemmul",
+                                ),
                             ],
                             alignment=ft.MainAxisAlignment.CENTER,
                             spacing=8,
                         ),
-                        bgcolor=ACCENT, border_radius=12,
+                        bgcolor=DANGER if self.monitoring else ACCENT,
+                        border_radius=12,
                         width=220,
                         padding=ft.padding.only(left=20, top=12, right=20, bottom=12),
                         on_click=self._toggle,

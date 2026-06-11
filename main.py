@@ -1,3 +1,4 @@
+import os
 import flet as ft
 from views.dashboard import DashboardView
 from views.posture import PostureView
@@ -34,6 +35,8 @@ def main(page: ft.Page):
     page.window.min_width    = 960
     page.window.min_height   = 576
     page.window.aspect_ratio = 5 / 3
+    _icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icon.ico")
+    page.window.icon         = _icon_path
 
     # 윈도우가 최종 크기(1200×720)로 완전히 자리잡은 뒤 중앙 이동
     async def _center_window():
@@ -202,4 +205,4 @@ def _build_main(page: ft.Page, show_auth, initial_view: str = "dashboard", pomo_
         tutorial.show()
 
 
-ft.app(main)
+ft.app(target=main, assets_dir="assets")
